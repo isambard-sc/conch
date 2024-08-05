@@ -1,0 +1,7 @@
+# SPDX-FileCopyrightText: © 2024 Matt Williams <matt.williams@bristol.ac.uk>
+# SPDX-License-Identifier: MIT
+
+FROM rockylinux:9-minimal
+COPY conch /usr/bin/
+CMD ["conch", "--port", "3000"]
+EXPOSE 3000

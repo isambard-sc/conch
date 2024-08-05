@@ -1,0 +1,36 @@
+# SPDX-FileCopyrightText: © 2024 Matt Williams <matt.williams@bristol.ac.uk>
+# SPDX-License-Identifier: MIT
+
+name: Build artefacts
+
+on:
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      ref:
+        type: string
+        required: true
+
+permissions: {}
+
+jobs:
+  build-release:
+    name: "Build release (${{ matrix.target }})"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref || '' }}
+          fetch-depth: 0  # This is needed so that git-describe works properly to set the version
+      - name: Install toolchain
+        uses: dtolnay/rust-toolchain@stable
+      - name: Build
+        run: cargo build --release
+      - name: Store build artefacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: target/release/conch
+          path: |
+            conch
