@@ -14,6 +14,11 @@ cp "$(artifact_path "${out}" "conch")" tests/integration/
 
 cd tests/integration
 
+echo "Extracting OIDC client information"
+cat << EOF > conch.toml
+issuer = "http://0.0.0.0:8080/realms/conch"
+EOF
+
 echo "Building containers"
 podman build . --tag=conch
 

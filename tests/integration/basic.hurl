@@ -3,3 +3,6 @@
 
 GET {{conch}}
 HTTP 200
+
+GET {{conch}}/sign
+HTTP 500

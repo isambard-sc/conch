@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: MIT
 
 FROM rockylinux:9-minimal
+COPY conch.toml /
 COPY conch /usr/bin/
-CMD ["conch", "--port", "3000"]
+CMD ["conch", "--port", "3000", "--config", "/conch.toml"]
 EXPOSE 3000
