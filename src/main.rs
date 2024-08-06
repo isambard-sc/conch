@@ -6,7 +6,7 @@ use std::sync::Arc;
 use anyhow::{Context as _, Result};
 use axum::{
     async_trait,
-    extract::FromRequestParts,
+    extract::{FromRequestParts, State},
     http::{request::Parts, StatusCode},
     response::{IntoResponse, Response},
     routing::get,
@@ -119,6 +119,7 @@ async fn main() -> Result<()> {
     let app = Router::new()
         .route("/", get(|| async { Json(serde_json::Value::Null) }))
         .route("/sign", get(sign))
+        .route("/issuer", get(issuer))
         .with_state(state);
     let listener =
         tokio::net::TcpListener::bind(&std::net::SocketAddr::new("0.0.0.0".parse()?, args.port))
@@ -130,6 +131,11 @@ async fn main() -> Result<()> {
 
 async fn sign(claims: Claims) {
     info!("Signing an SSH key");
+}
+
+#[tracing::instrument(skip(state))]
+async fn issuer(State(state): State<Arc<AppState>>) -> Result<String, AppError> {
+    Ok(state.provider_metadata.issuer().to_string())
 }
 
 // Errors

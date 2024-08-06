@@ -26,8 +26,11 @@ tests/integration/run.sh
 echo "Waiting server to be ready"
 wait_for_url "http://0.0.0.0:3000" 60
 
+echo "Getting auth issuer URL"
+ISSUER=$(curl --no-progress-meter http://0.0.0.0:3000/issuer)
+
 echo "Logging in as test user"
-TOKEN=$(curl --silent --show-error --data "username=test&password=test&grant_type=password&client_id=conch" http://localhost:8080/realms/conch/protocol/openid-connect/token | jq --raw-output '.access_token')
+TOKEN=$(curl --silent --show-error --data "username=test&password=test&grant_type=password&client_id=conch" ${ISSUER}/protocol/openid-connect/token | jq --raw-output '.access_token')
 
 echo "Running Hurl tests"
 hurl \
