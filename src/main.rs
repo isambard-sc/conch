@@ -69,6 +69,7 @@ impl FromRequestParts<Arc<AppState>> for Claims {
         let kid = jwt::decode_header(bearer.token())?
             .kid
             .context("Could not decode KID.")?;
+        let alg = jwt::decode_header(bearer.token())?.alg;
         let jwk = state
             .provider_metadata
             .jwks()
@@ -77,10 +78,12 @@ impl FromRequestParts<Arc<AppState>> for Claims {
             .find(|k| k.key_id().is_some_and(|k| k.as_str() == kid))
             .context("Could not find JWK matching KID.")?;
         let jwk = serde_json::from_value(serde_json::to_value(jwk)?)?; // Convert from `openidconnect` to `jsonwebtoken`.
+        let mut validation = jwt::Validation::new(alg);
+        validation.set_audience(&["account"]);
         let token_data = jwt::decode::<Claims>(
             bearer.token(),
             &jwt::DecodingKey::from_jwk(&jwk)?,
-            &jwt::Validation::default(),
+            &validation,
         )
         .context("Could not decode JWT")?;
 

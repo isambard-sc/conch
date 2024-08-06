@@ -26,9 +26,13 @@ tests/integration/run.sh
 echo "Waiting server to be ready"
 wait_for_url "http://0.0.0.0:3000" 60
 
+echo "Logging in as test user"
+TOKEN=$(curl --silent --show-error --data "username=test&password=test&grant_type=password&client_id=conch" http://localhost:8080/realms/conch/protocol/openid-connect/token | jq --raw-output '.access_token')
+
 echo "Running Hurl tests"
 hurl \
     --variable conch="http://0.0.0.0:3000" \
+    --variable token="${TOKEN}" \
     --test tests/integration/*.hurl \
     --report-html results \
     --error-format long \

@@ -6,3 +6,7 @@ HTTP 200
 
 GET {{conch}}/sign
 HTTP 500
+
+GET {{conch}}/sign
+Authorization: Bearer {{ token }}
+HTTP 200
