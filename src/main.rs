@@ -3,10 +3,10 @@
 
 use std::sync::Arc;
 
-use anyhow::{Context as _, Result};
+use anyhow::{anyhow, Context as _, Result};
 use axum::{
     async_trait,
-    extract::{FromRequestParts, State},
+    extract::{FromRequestParts, Query, State},
     http::{request::Parts, StatusCode},
     response::{IntoResponse, Response},
     routing::get,
@@ -41,16 +41,21 @@ struct Args {
 #[derive(Deserialize)]
 struct Config {
     issuer: url::Url,
+    signing_key_path: std::path::PathBuf,
 }
 
 #[derive(Debug)]
 struct AppState {
     provider_metadata: CoreProviderMetadata, // TODO Cache this and refresh periodically
+    signing_key_path: std::path::PathBuf,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Claims {
     iss: String,
+    unix_username: String,
+    projects: Vec<String>,
+    email: String,
 }
 
 #[async_trait]
@@ -114,7 +119,10 @@ async fn main() -> Result<()> {
     })
     .await?;
 
-    let state = Arc::new(AppState { provider_metadata });
+    let state = Arc::new(AppState {
+        provider_metadata,
+        signing_key_path: config.signing_key_path,
+    });
 
     let app = Router::new()
         .route("/", get(|| async { Json(serde_json::Value::Null) }))
@@ -129,8 +137,121 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-async fn sign(claims: Claims) {
+#[derive(Debug, Deserialize)]
+struct SignRequest {
+    public_key: ssh_key::PublicKey,
+}
+
+#[derive(Debug, Serialize)]
+struct SignResponse {
+    service: String,
+    certificate: ssh_key::Certificate,
+    projects: Vec<Project>,
+    #[serde(with = "http_serde::authority")]
+    hostname: axum::http::uri::Authority,
+    #[serde(with = "http_serde::authority")]
+    proxy_jump: axum::http::uri::Authority,
+    user: String,
+    version: u32,
+}
+
+#[derive(Debug, Serialize)]
+struct Project {
+    short_name: String,
+    username: String,
+}
+
+#[tracing::instrument(skip(state))]
+async fn sign(
+    State(state): State<Arc<AppState>>,
+    claims: Claims,
+    payload: Query<SignRequest>,
+) -> Result<Json<SignResponse>, AppError> {
     info!("Signing an SSH key");
+    match payload.public_key.key_data() {
+        ssh_key::public::KeyData::Rsa(k) => {
+            // https://github.com/RustCrypto/SSH/issues/261
+            if k.n
+                .as_positive_bytes()
+                .context("Could not interpret key RSA modulus as positive integer.")?
+                .len()
+                * 8
+                < 3072
+            {
+                return Err(anyhow!("RSA keys must be at least 3072 bits long.").into());
+            }
+        }
+        ssh_key::public::KeyData::Dsa(_) => {
+            return Err(anyhow!("DSA keys are not supported.").into());
+        }
+        _ => (),
+    };
+    let signing_key = ssh_key::PrivateKey::read_openssh_file(&state.signing_key_path)
+        .context("Could not load signing key.")?;
+
+    let short_names = claims.projects;
+    let unix_username = claims.unix_username;
+
+    let projects: Vec<Project> = short_names
+        .iter()
+        .map(|p| Project {
+            short_name: p.to_string(),
+            username: format!("{unix_username}.{p}"),
+        })
+        .collect();
+    let principals = projects.iter().map(|p| p.username.clone());
+    let service = "ai.isambard".to_string(); // TODO
+    let hostname = "ai-p1.access.isambard.ac.uk".parse()?; // TODO
+    let proxy_jump = "ai.login.isambard.ac.uk".parse()?; // TODO
+    let valid_after = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)?
+        .as_secs();
+    let valid_before = valid_after + (60 * 60 * 12);
+    let mut cert_builder = ssh_key::certificate::Builder::new_with_random_nonce(
+        &mut rand_core::OsRng,
+        &payload.public_key,
+        valid_after,
+        valid_before,
+    )
+    .context("Could not create SSH certificate builder.")?;
+    cert_builder
+        .cert_type(ssh_key::certificate::CertType::User)
+        .context("Could not set certificte type.")?;
+    for principal in principals {
+        cert_builder
+            .valid_principal(principal)
+            .context("Could not set valid principal.")?;
+    }
+    cert_builder
+        .key_id(
+            serde_json::to_string(&serde_json::json!({"service":service, "projects": short_names}))
+                .context("Could not encode JSON.")?,
+        )
+        .context("Could not set key ID.")?;
+    cert_builder
+        .extension("permit-agent-forwarding", "")
+        .context("Could not set extension.")?;
+    cert_builder
+        .extension("permit-port-forwarding", "")
+        .context("Could not set extension.")?;
+    cert_builder
+        .extension("permit-pty", "")
+        .context("Could not set extension.")?;
+    let certificate = cert_builder
+        .sign(&signing_key)
+        .context("Could not sign key.")?;
+
+    let response = SignResponse {
+        service,
+        certificate,
+        projects,
+        hostname,
+        proxy_jump,
+        user: claims.email,
+        version: 1,
+    };
+    info!(response = ?response);
+    Ok(Json(response))
 }
 
 #[tracing::instrument(skip(state))]

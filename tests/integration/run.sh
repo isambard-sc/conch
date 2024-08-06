@@ -66,8 +66,8 @@ curl -X POST http://localhost:8080/admin/realms/conch/client-scopes/extra/protoc
     "config": {
       "user.attribute": "unix_username",
       "claim.name": "unix_username",
-      "id.token.claim": "true",
-      "access.token.claim": "true",
+      "id.token.claim": true,
+      "access.token.claim": true,
       "jsonType.label": "String"
     }
   }
@@ -83,9 +83,10 @@ curl -X POST http://localhost:8080/admin/realms/conch/client-scopes/extra/protoc
     "config": {
       "user.attribute": "projects",
       "claim.name": "projects",
-      "id.token.claim": "true",
-      "access.token.claim": "true",
-      "jsonType.label": "String"
+      "id.token.claim": true,
+      "access.token.claim": true,
+      "jsonType.label": "String",
+      "multivalued": true
     }
   }
 EOF
@@ -122,6 +123,8 @@ curl -X POST http://localhost:8080/admin/realms/conch/users \
   {
     "username": "test",
     "enabled": true,
+    "email": "test@example.com",
+    "emailVerified": true,
     "attributes": {
       "unix_username": ["test_person"],
       "projects": ["proj1", "proj2"]

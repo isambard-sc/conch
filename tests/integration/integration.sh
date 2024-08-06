@@ -6,8 +6,10 @@ set -euo pipefail
 # Run the integration tests in podman.
 
 function on_exit {
+    rm -f tests/integration/id_*
     rm -f conch.log
-    podman pod logs conch > conch.log
+    podman logs conch-c > conch.log
+    podman logs keycloak-c > keycloak.log
     echo "Shutting down pod"
     podman pod rm --force --time=0 conch || podman pod rm --force conch
 }
@@ -31,13 +33,30 @@ ISSUER=$(curl --no-progress-meter http://0.0.0.0:3000/issuer)
 
 echo "Logging in as test user"
 TOKEN=$(curl --silent --show-error --data "username=test&password=test&grant_type=password&client_id=conch" ${ISSUER}/protocol/openid-connect/token | jq --raw-output '.access_token')
+echo "Test user token: $TOKEN"
+
+echo "Generating SSH keys"
+rm -f tests/integration/id_*
+ssh-keygen -q -t ed25519 -N '' -f tests/integration/id_ed25519
+SSH_KEY_ED25519_PUB=$(cat tests/integration/id_ed25519.pub)
+ssh-keygen -q -t rsa -b 2048 -N '' -f tests/integration/id_rsa_2048
+SSH_KEY_RSA_2048_PUB=$(cat tests/integration/id_rsa_2048.pub)
+ssh-keygen -q -t rsa -b 3072 -N '' -f tests/integration/id_rsa_3072
+SSH_KEY_RSA_3072_PUB=$(cat tests/integration/id_rsa_3072.pub)
+ssh-keygen -q -t dsa -N '' -f tests/integration/id_dsa
+SSH_KEY_DSA_PUB=$(cat tests/integration/id_dsa.pub)
 
 echo "Running Hurl tests"
 hurl \
     --variable conch="http://0.0.0.0:3000" \
     --variable token="${TOKEN}" \
+    --variable ssh_key_ed25519_pub="${SSH_KEY_ED25519_PUB}" \
+    --variable ssh_key_rsa_2048_pub="${SSH_KEY_RSA_2048_PUB}" \
+    --variable ssh_key_rsa_3072_pub="${SSH_KEY_RSA_3072_PUB}" \
+    --variable ssh_key_dsa_pub="${SSH_KEY_DSA_PUB}" \
     --test tests/integration/*.hurl \
     --report-html results \
     --error-format long \
     --color
 
+#curl http://0.0.0.0:3000/sign
