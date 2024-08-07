@@ -133,12 +133,12 @@ jobs:
       - name: Fetch release artefacts
         uses: actions/download-artifact@v4
         with:
-          pattern: ssh-ca
+          pattern: conch
           merge-multiple: true
       - name: Attest SBOM
         uses: actions/attest-sbom@v1
         with:
-          subject-path: ssh-ca
+          subject-path: conch
           sbom-path: sbom.spdx.json
       - name: Store SBOM
         uses: actions/upload-artifact@v4
@@ -156,15 +156,10 @@ jobs:
       - name: Fetch release artefacts
         uses: actions/download-artifact@v4
         with:
-          pattern: ssh-ca
-          merge-multiple: true
-      - run: pwd
-      - run: ls -l
-      - run: ls "${GITHUB_WORKSPACE}"
-      - run: tree
+          pattern: conch      
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.tag-release.outputs.ref }}
-          files: ssh-ca
+          files: conch
           body: ${{ needs.tag-release.outputs.changelog }}
