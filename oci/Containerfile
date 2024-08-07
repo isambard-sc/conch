@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: MIT
 
 FROM gcr.io/distroless/cc-debian12
+COPY conch /
+ENTRYPOINT ["/conch"]
 LABEL org.opencontainers.image.source=https://github.com/isambard-sc/conch
 LABEL org.opencontainers.image.description="Conch SSH CA"
 LABEL org.opencontainers.image.licenses=MIT
-COPY conch /
-ENTRYPOINT ["/conch"]
