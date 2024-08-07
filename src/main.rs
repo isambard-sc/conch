@@ -103,11 +103,11 @@ async fn main() -> Result<()> {
 
     let args = Args::parse();
 
-    let config: Config = toml::from_str(
-        &std::fs::read_to_string(&args.config)
-            .context(format!("Could not read config file {:?}", &args.config))?,
-    )
-    .context("Cannot parse config file")?;
+    let config: Config = config::Config::builder()
+        .add_source(config::File::from(args.config))
+        .add_source(config::Environment::with_prefix("CONCH"))
+        .build()?
+        .try_deserialize()?;
 
     let issuer_url = IssuerUrl::from_url(config.issuer);
 
