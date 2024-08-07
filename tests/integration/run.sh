@@ -18,7 +18,7 @@ echo "Starting keycloak container"
 podman container run --detach --pod=conch --name keycloak-c \
   -e KEYCLOAK_ADMIN=admin -e KEYCLOAK_ADMIN_PASSWORD=admin \
   quay.io/keycloak/keycloak:25.0 \
-  start-dev
+  start-dev --http-port=8080
 echo "Logging in to KeyCloak"
 TOKEN=$(
   curl --retry 60 --retry-delay 2 --retry-all-errors --no-progress-meter \
@@ -149,5 +149,16 @@ for USERID in ${USERIDS}; do
     }
 EOF
 done
+
+echo "Creating test signing key"
+mkdir -p temp
+rm -f temp/signing_key*
+ssh-keygen -q -t ed25519 -f temp/signing_key -C '' -N ''
 echo "Starting conch container"
-podman container run --detach --pod=conch --env='RUST_LOG=debug' --name conch-c conch
+podman container run --detach --pod=conch \
+  --env='RUST_LOG=debug' \
+  --env=CONCH_ISSUER="http://0.0.0.0:8080/realms/conch" \
+  --env=CONCH_SIGNING_KEY_PATH="/signing_key" \
+  --volume="./temp/signing_key":"/signing_key":ro \
+  --name conch-c \
+  conch --port 3000

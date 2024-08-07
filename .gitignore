@@ -4,4 +4,4 @@
 /target
 results
 *.log
-tests/integration/conch.toml
+tests/integration/temp

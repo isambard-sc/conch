@@ -32,7 +32,7 @@ use tracing::info;
 struct Args {
     /// the config file
     #[arg(long)]
-    config: std::path::PathBuf,
+    config: Option<std::path::PathBuf>,
     /// the port to open the service on
     #[arg(long, default_value_t = 3000)]
     port: u16,
@@ -103,11 +103,18 @@ async fn main() -> Result<()> {
 
     let args = Args::parse();
 
-    let config: Config = config::Config::builder()
-        .add_source(config::File::from(args.config))
-        .add_source(config::Environment::with_prefix("CONCH"))
-        .build()?
-        .try_deserialize()?;
+    let config: Config = {
+        let mut builder = config::Config::builder();
+        if let Some(config_file_path) = &args.config {
+            builder = builder.add_source(config::File::from(config_file_path.as_path()));
+        };
+        builder
+            .add_source(config::Environment::with_prefix("CONCH"))
+            .build()
+            .context("Could not build config description.")?
+            .try_deserialize()
+            .context("Could not build config.")?
+    };
 
     let issuer_url = IssuerUrl::from_url(config.issuer);
 

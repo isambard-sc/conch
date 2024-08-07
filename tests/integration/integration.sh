@@ -6,7 +6,7 @@ set -euo pipefail
 # Run the integration tests in podman.
 
 function on_exit {
-    rm -f tests/integration/id_*
+    rm -rf tests/integration/temp
     rm -f conch.log
     podman logs conch-c > conch.log
     podman logs keycloak-c > keycloak.log
@@ -26,7 +26,7 @@ echo "Starting container"
 tests/integration/run.sh
 
 echo "Waiting server to be ready"
-wait_for_url "http://0.0.0.0:3000" 60
+wait_for_url "http://0.0.0.0:3000" 30
 
 echo "Getting auth issuer URL"
 ISSUER=$(curl --no-progress-meter http://0.0.0.0:3000/issuer)
@@ -36,15 +36,16 @@ TOKEN=$(curl --silent --show-error --data "username=test&password=test&grant_typ
 echo "Test user token: $TOKEN"
 
 echo "Generating SSH keys"
-rm -f tests/integration/id_*
-ssh-keygen -q -t ed25519 -N '' -f tests/integration/id_ed25519
-SSH_KEY_ED25519_PUB=$(cat tests/integration/id_ed25519.pub)
-ssh-keygen -q -t rsa -b 2048 -N '' -f tests/integration/id_rsa_2048
-SSH_KEY_RSA_2048_PUB=$(cat tests/integration/id_rsa_2048.pub)
-ssh-keygen -q -t rsa -b 3072 -N '' -f tests/integration/id_rsa_3072
-SSH_KEY_RSA_3072_PUB=$(cat tests/integration/id_rsa_3072.pub)
-ssh-keygen -q -t dsa -N '' -f tests/integration/id_dsa
-SSH_KEY_DSA_PUB=$(cat tests/integration/id_dsa.pub)
+mkdir -p temp
+rm -f tests/integration/temp/id_*
+ssh-keygen -q -t ed25519 -N '' -f tests/integration/temp/id_ed25519
+SSH_KEY_ED25519_PUB=$(cat tests/integration/temp/id_ed25519.pub)
+ssh-keygen -q -t rsa -b 2048 -N '' -f tests/integration/temp/id_rsa_2048
+SSH_KEY_RSA_2048_PUB=$(cat tests/integration/temp/id_rsa_2048.pub)
+ssh-keygen -q -t rsa -b 3072 -N '' -f tests/integration/temp/id_rsa_3072
+SSH_KEY_RSA_3072_PUB=$(cat tests/integration/temp/id_rsa_3072.pub)
+ssh-keygen -q -t dsa -N '' -f tests/integration/temp/id_dsa
+SSH_KEY_DSA_PUB=$(cat tests/integration/temp/id_dsa.pub)
 
 echo "Running Hurl tests"
 hurl \

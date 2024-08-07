@@ -1,8 +1,6 @@
 # SPDX-FileCopyrightText: © 2024 Matt Williams <matt.williams@bristol.ac.uk>
 # SPDX-License-Identifier: MIT
 
-FROM rockylinux:9-minimal
-COPY conch.toml signing_key /
-COPY conch /usr/bin/
-CMD ["conch", "--port", "3000", "--config", "/conch.toml"]
-EXPOSE 3000
+FROM gcr.io/distroless/cc-debian12
+COPY conch /
+ENTRYPOINT ["/conch"]
