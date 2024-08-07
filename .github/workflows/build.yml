@@ -19,6 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -30,9 +31,24 @@ jobs:
         run: cargo build --release
       - name: Build OCI image
         run: oci/build.sh --release
+      - name: Log in to ghcr.io
+        uses: redhat-actions/podman-login@v1
+        with:
+          registry: ghcr.io/${{ github.repository_owner }}
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Publish OCI image
+        run: |
+          echo "Getting version and OCI tag"
+          version=$(target/release/conch --version | tail -n1 | cut -d' ' -f 2)
+          tag="ghcr.io/${{ github.repository }}:${version}"
+          echo "Tagging as ${tag}"
+          podman tag localhost/conch:latest "${tag}"
+          echo "Pushing to ${tag}"
+          podman push "${tag}"
       - name: Store build artefacts
         uses: actions/upload-artifact@v4
         with:
-          name: target/release/conch
+          name: conch
           path: |
-            conch
+            target/release/conch
