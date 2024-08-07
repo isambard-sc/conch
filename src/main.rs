@@ -26,8 +26,16 @@ use serde_json::json;
 use tokio_retry::{strategy::FixedInterval, Retry};
 use tracing::info;
 
+pub mod built_info {
+    include!(concat!(env!("OUT_DIR"), "/built.rs"));
+}
+
+fn version() -> &'static str {
+    built_info::GIT_VERSION.unwrap_or(built_info::PKG_VERSION)
+}
+
 #[derive(Parser)]
-#[command(version, about, long_about = None)]
+#[command(version = version(), about, long_about = None)]
 /// Conch SSH CA
 struct Args {
     /// the config file

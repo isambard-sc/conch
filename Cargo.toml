@@ -6,6 +6,7 @@ name = "conch"
 version = "0.0.0"
 edition = "2021"
 license = "MIT"
+build = "build.rs"
 
 [dependencies]
 anyhow = "1.0"
@@ -25,6 +26,9 @@ tokio-retry = "0.3.0"
 tracing = "0.1"
 tracing-subscriber = "0.3"
 url = "2.5.2"
+
+[build-dependencies]
+built = { version = "0.7", default-features = false, features = ["git2"] }
 
 [lints.rust]
 unsafe_code = "forbid"
