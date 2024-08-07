@@ -160,5 +160,6 @@ podman container run --detach --pod=conch \
   --env=CONCH_ISSUER="http://0.0.0.0:8080/realms/conch" \
   --env=CONCH_SIGNING_KEY_PATH="/signing_key" \
   --volume="./temp/signing_key":"/signing_key":ro \
+  --read-only \
   --name conch-c \
   conch --port 3000
