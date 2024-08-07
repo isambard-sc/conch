@@ -37,15 +37,19 @@ jobs:
       - name: Get version
         id: get_version
         run: echo version="$(target/release/conch --version | tail -n1 | cut -d' ' -f 2)" >> "${GITHUB_OUTPUT}"
+      - name: Log in to GHCR
+        uses: redhat-actions/podman-login@v1
+        with:
+          registry: ghcr.io/${{ github.repository_owner }}
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
       - name: Publish OCI image
         id: push-to-ghcr
         uses: redhat-actions/push-to-registry@v2
         with:
-          image: localhost/conch
+          image: conch
           tags: ${{ steps.get_version.outputs.version }}
           registry: ghcr.io/${{ github.repository_owner }}
-          username: ${{ github.actor }}
-          password: ${{ github.token }}
       - name: Attest
         uses: actions/attest-build-provenance@v1
         id: attest
