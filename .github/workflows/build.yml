@@ -27,6 +27,7 @@ jobs:
           fetch-depth: 0  # This is needed so that git-describe works properly to set the version
       - name: Install toolchain
         uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
       - name: Build
         run: cargo build --release
       - name: Build OCI image
