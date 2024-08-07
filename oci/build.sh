@@ -15,7 +15,14 @@ cp "$(artifact_path "${out}" "conch")" oci
 cd oci
 
 version=$(./conch --version | tail -n1 | cut -d' ' -f 2)
-image_id=$(podman build . --tag=conch:latest --tag=conch:"${version}" | tee /dev/fd/2 | tail -n1)
+image_id=$(
+  podman build . --tag=conch:latest --tag=conch:"${version}" \
+    --annotation="org.opencontainers.image.source=https://github.com/isambard-sc/conch" \
+    --annotation="org.opencontainers.image.description=Conch SSH CA" \
+    --annotation="org.opencontainers.image.licenses=MIT" \
+    | tee /dev/fd/2 \
+    | tail -n1
+)
 rm conch
 echo "Built conch image:" 1>&2
 echo "${image_id}"
