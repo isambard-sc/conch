@@ -31,21 +31,25 @@ jobs:
         run: cargo build --release
       - name: Build OCI image
         run: oci/build.sh --release
-      - name: Log in to ghcr.io
-        uses: redhat-actions/podman-login@v1
+      - name: Get version
+        id: get_version
+        run: echo version="$(target/release/conch --version | tail -n1 | cut -d' ' -f 2)" >> "${GITHUB_OUTPUT}"
+      - name: Publish OCI image
+        id: push-to-ghcr
+        uses: redhat-actions/push-to-registry@v2
         with:
+          image: localhost/conch
+          tags: ${{ steps.get_version.outputs.version }}
           registry: ghcr.io/${{ github.repository_owner }}
           username: ${{ github.actor }}
           password: ${{ github.token }}
-      - name: Publish OCI image
-        run: |
-          echo "Getting version and OCI tag"
-          version=$(target/release/conch --version | tail -n1 | cut -d' ' -f 2)
-          tag="ghcr.io/${{ github.repository }}:${version}"
-          echo "Tagging as ${tag}"
-          podman tag localhost/conch:latest "${tag}"
-          echo "Pushing to ${tag}"
-          podman push "${tag}"
+      - name: Attest
+        uses: actions/attest-build-provenance@v1
+        id: attest
+        with:
+          subject-name: ghcr.io/${{ github.repository }}
+          subject-digest: ${{ steps.push-to-ghcr.outputs.digest }}
+          push-to-registry: true
       - name: Store build artefacts
         uses: actions/upload-artifact@v4
         with:
