@@ -23,7 +23,6 @@ use openidconnect::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use tokio_retry::{strategy::FixedInterval, Retry};
 use tracing::info;
 
 pub mod built_info {
@@ -126,13 +125,11 @@ async fn main() -> Result<()> {
 
     let issuer_url = IssuerUrl::from_url(config.issuer);
 
-    let provider_metadata = Retry::spawn(FixedInterval::from_millis(1_000).take(60), || async {
-        info!("Trying to access the OIDC endpoints.");
+    info!("Trying to access the OIDC endpoints.");
+    let provider_metadata =
         CoreProviderMetadata::discover_async(issuer_url.clone(), async_http_client)
             .await
-            .context("")
-    })
-    .await?;
+            .context("Could not get OIDC metadata.")?;
 
     let state = Arc::new(AppState {
         provider_metadata,

@@ -162,4 +162,5 @@ podman container run --detach --pod=conch \
   --volume="./temp/signing_key":"/signing_key":ro \
   --read-only \
   --name conch-c \
+  --restart=on-failure:10 \
   conch --port 3000
