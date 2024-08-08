@@ -67,52 +67,6 @@ struct AppState {
     config: Config,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
-struct Claims {
-    iss: String,
-    unix_username: String,
-    projects: HashMap<String, Vec<String>>,
-    email: String,
-}
-
-#[async_trait]
-impl FromRequestParts<Arc<AppState>> for Claims {
-    type Rejection = AppError;
-
-    async fn from_request_parts(
-        parts: &mut Parts,
-        state: &Arc<AppState>,
-    ) -> Result<Self, Self::Rejection> {
-        // Extract the token from the authorization header
-        let TypedHeader(Authorization(bearer)) = parts
-            .extract::<TypedHeader<Authorization<Bearer>>>()
-            .await
-            .context("Could not extract Bearer header")?;
-        let kid = jwt::decode_header(bearer.token())?
-            .kid
-            .context("Could not decode KID.")?;
-        let alg = jwt::decode_header(bearer.token())?.alg;
-        let jwk = state
-            .provider_metadata
-            .jwks()
-            .keys()
-            .iter()
-            .find(|k| k.key_id().is_some_and(|k| k.as_str() == kid))
-            .context("Could not find JWK matching KID.")?;
-        let jwk = serde_json::from_value(serde_json::to_value(jwk)?)?; // Convert from `openidconnect` to `jsonwebtoken`.
-        let mut validation = jwt::Validation::new(alg);
-        validation.set_audience(&["account"]);
-        let token_data = jwt::decode::<Claims>(
-            bearer.token(),
-            &jwt::DecodingKey::from_jwk(&jwk)?,
-            &validation,
-        )
-        .context("Could not decode JWT")?;
-
-        Ok(token_data.claims)
-    }
-}
-
 #[tokio::main]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
@@ -181,6 +135,52 @@ async fn shutdown_signal() {
     tokio::select! {
         _ = ctrl_c => {},
         _ = terminate => {},
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize)]
+struct Claims {
+    iss: String,
+    unix_username: String,
+    projects: HashMap<String, Vec<String>>,
+    email: String,
+}
+
+#[async_trait]
+impl FromRequestParts<Arc<AppState>> for Claims {
+    type Rejection = AppError;
+
+    async fn from_request_parts(
+        parts: &mut Parts,
+        state: &Arc<AppState>,
+    ) -> Result<Self, Self::Rejection> {
+        // Extract the token from the authorization header
+        let TypedHeader(Authorization(bearer)) = parts
+            .extract::<TypedHeader<Authorization<Bearer>>>()
+            .await
+            .context("Could not extract Bearer header")?;
+        let kid = jwt::decode_header(bearer.token())?
+            .kid
+            .context("Could not decode KID.")?;
+        let alg = jwt::decode_header(bearer.token())?.alg;
+        let jwk = state
+            .provider_metadata
+            .jwks()
+            .keys()
+            .iter()
+            .find(|k| k.key_id().is_some_and(|k| k.as_str() == kid))
+            .context("Could not find JWK matching KID.")?;
+        let jwk = serde_json::from_value(serde_json::to_value(jwk)?)?; // Convert from `openidconnect` to `jsonwebtoken`.
+        let mut validation = jwt::Validation::new(alg);
+        validation.set_audience(&["account"]);
+        let token_data = jwt::decode::<Claims>(
+            bearer.token(),
+            &jwt::DecodingKey::from_jwk(&jwk)?,
+            &validation,
+        )
+        .context("Could not decode JWT")?;
+
+        Ok(token_data.claims)
     }
 }
 
