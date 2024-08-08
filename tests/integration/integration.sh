@@ -26,10 +26,10 @@ echo "Starting container"
 tests/integration/run.sh
 
 echo "Waiting server to be ready"
-wait_for_url "http://0.0.0.0:3000" 30
+wait_for_url "http://localhost:3000" 30
 
 echo "Getting auth issuer URL"
-ISSUER=$(curl --no-progress-meter http://0.0.0.0:3000/issuer)
+ISSUER=$(curl --no-progress-meter http://localhost:3000/issuer)
 
 echo "Logging in as test user"
 TOKEN=$(curl --silent --show-error --data "username=test&password=test&grant_type=password&client_id=conch" ${ISSUER}/protocol/openid-connect/token | jq --raw-output '.access_token')
@@ -49,7 +49,7 @@ SSH_KEY_DSA_PUB=$(cat tests/integration/temp/id_dsa.pub)
 
 echo "Running Hurl tests"
 hurl \
-    --variable conch="http://0.0.0.0:3000" \
+    --variable conch="http://localhost:3000" \
     --variable token="${TOKEN}" \
     --variable ssh_key_ed25519_pub="${SSH_KEY_ED25519_PUB}" \
     --variable ssh_key_rsa_2048_pub="${SSH_KEY_RSA_2048_PUB}" \
