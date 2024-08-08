@@ -8,8 +8,8 @@ set -euo pipefail
 function on_exit {
     rm -rf tests/integration/temp
     rm -f conch.log
-    podman logs conch-c > conch.log
-    podman logs keycloak-c > keycloak.log
+    podman logs conch-conch &> conch.log
+    podman logs conch-keycloak &> keycloak.log
     echo "Shutting down pod"
     podman pod rm --force --time=0 conch || podman pod rm --force conch
 }

@@ -9,16 +9,22 @@ set -euo pipefail
 
 cd tests/integration
 
-echo "Deleting existing pod"
-podman pod rm --force --time=0 conch || true
-echo "Creating new pod"
-podman pod create --publish=3000:3000 --publish=8080:8080 --name conch
+echo "Creating test signing key"
+mkdir -p temp
+rm -f temp/signing_key*
+ssh-keygen -q -t ed25519 -f temp/signing_key -C '' -N ''
+podman secret exists conch-signing-key-secret && podman secret rm conch-signing-key-secret
+cat << EOF | podman secret create conch-signing-key-secret -
+apiVersion: v1
+kind: Secret
+metadata:
+  name: conch-signing-key-secret
+data:
+  key: $(base64 --wrap=0 temp/signing_key)
+EOF
+echo "Starting test pod"
+podman kube play --replace k8s.yml
 
-echo "Starting keycloak container"
-podman container run --detach --pod=conch --name keycloak-c \
-  -e KEYCLOAK_ADMIN=admin -e KEYCLOAK_ADMIN_PASSWORD=admin \
-  quay.io/keycloak/keycloak:25.0 \
-  start-dev --http-port=8080
 echo "Logging in to KeyCloak"
 TOKEN=$(
   curl --retry 60 --retry-delay 2 --retry-all-errors --no-progress-meter \
@@ -149,18 +155,3 @@ for USERID in ${USERIDS}; do
     }
 EOF
 done
-
-echo "Creating test signing key"
-mkdir -p temp
-rm -f temp/signing_key*
-ssh-keygen -q -t ed25519 -f temp/signing_key -C '' -N ''
-echo "Starting conch container"
-podman container run --detach --pod=conch \
-  --env='RUST_LOG=debug' \
-  --env=CONCH_ISSUER="http://localhost:8080/realms/conch" \
-  --env=CONCH_SIGNING_KEY_PATH="/signing_key" \
-  --volume="./temp/signing_key":"/signing_key":ro \
-  --read-only \
-  --name conch-c \
-  --restart=on-failure:10 \
-  conch --port 3000

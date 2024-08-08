@@ -1,0 +1,43 @@
+# SPDX-FileCopyrightText: © 2024 Matt Williams <matt.williams@bristol.ac.uk>
+# SPDX-License-Identifier: MIT
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: conch
+spec:
+  containers:
+    - name: keycloak
+      image: quay.io/keycloak/keycloak:25.0
+      args: ["start-dev", "--http-port=8080"]
+      env:
+        - name: KEYCLOAK_ADMIN
+          value: admin
+        - name: KEYCLOAK_ADMIN_PASSWORD
+          value: admin
+      ports:
+        - containerPort: 8080
+        - hostPort: 8080
+    - name: conch
+      image: localhost/conch:latest
+      args: ["--port=3000"]
+      env:
+        - name: CONCH_ISSUER
+          value: "http://localhost:8080/realms/conch"
+        - name: CONCH_SIGNING_KEY_PATH
+          value: "/signing_key/key"
+        - name: RUST_LOG
+          value: debug
+      ports:
+        - containerPort: 3000
+        - hostPort: 3000
+      volumeMounts:
+        - mountPath: "/signing_key"
+          name: conch-signing-key-volume
+          read-only: true
+      securityContext:
+        readOnlyRootFilesystem: true
+  volumes:
+      - name: conch-signing-key-volume
+        secret:
+          secretName: conch-signing-key-secret
