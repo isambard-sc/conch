@@ -59,5 +59,3 @@ hurl \
     --report-html results \
     --error-format long \
     --color
-
-#curl http://0.0.0.0:3000/sign

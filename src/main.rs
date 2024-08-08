@@ -141,11 +141,15 @@ async fn main() -> Result<()> {
         .route("/sign", get(sign))
         .route("/issuer", get(issuer))
         .with_state(state);
-    let listener =
-        tokio::net::TcpListener::bind(&std::net::SocketAddr::new("0.0.0.0".parse()?, args.port))
-            .await?;
+    let listener = tokio::net::TcpListener::bind(&std::net::SocketAddr::new(
+        std::net::Ipv4Addr::LOCALHOST.into(),
+        args.port,
+    ))
+    .await?;
+    info!("Starting server.");
     axum::serve(listener, app).await?;
 
+    info!("Exiting.");
     Ok(())
 }
 

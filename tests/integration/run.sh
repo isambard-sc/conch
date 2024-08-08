@@ -157,7 +157,7 @@ ssh-keygen -q -t ed25519 -f temp/signing_key -C '' -N ''
 echo "Starting conch container"
 podman container run --detach --pod=conch \
   --env='RUST_LOG=debug' \
-  --env=CONCH_ISSUER="http://0.0.0.0:8080/realms/conch" \
+  --env=CONCH_ISSUER="http://localhost:8080/realms/conch" \
   --env=CONCH_SIGNING_KEY_PATH="/signing_key" \
   --volume="./temp/signing_key":"/signing_key":ro \
   --read-only \
