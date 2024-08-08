@@ -2,6 +2,16 @@
 # SPDX-License-Identifier: MIT
 ---
 apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: conch-config
+data:
+  conch.toml: |
+    issuer = "http://localhost:8080/realms/conch"
+    signing_key_path = "/signing_key/key"
+
+---
+apiVersion: v1
 kind: Pod
 metadata:
   name: conch
@@ -20,12 +30,8 @@ spec:
         - hostPort: 8080
     - name: conch
       image: localhost/conch:latest
-      args: ["--port=3000"]
+      args: ["--port=3000", "--config=/config/conch.toml"]
       env:
-        - name: CONCH_ISSUER
-          value: "http://localhost:8080/realms/conch"
-        - name: CONCH_SIGNING_KEY_PATH
-          value: "/signing_key/key"
         - name: RUST_LOG
           value: debug
       ports:
@@ -35,9 +41,15 @@ spec:
         - mountPath: "/signing_key"
           name: conch-signing-key-volume
           read-only: true
+        - mountPath: "/config"
+          name: conch-config-volume
+          read-only: true
       securityContext:
         readOnlyRootFilesystem: true
   volumes:
       - name: conch-signing-key-volume
         secret:
           secretName: conch-signing-key-secret
+      - name: conch-config-volume
+        configMap:
+          name: conch-config
