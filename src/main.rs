@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: © 2024 Matt Williams <matt.williams@bristol.ac.uk>
 // SPDX-License-Identifier: MIT
 
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use anyhow::{anyhow, Context as _, Result};
 use axum::{
@@ -45,23 +45,33 @@ struct Args {
     port: u16,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 struct Config {
     issuer: url::Url,
     signing_key_path: std::path::PathBuf,
+    #[serde(default)]
+    services: HashMap<String, Service>,
+}
+
+#[derive(Debug, Deserialize)]
+struct Service {
+    #[serde(with = "http_serde::authority")]
+    hostname: axum::http::uri::Authority,
+    #[serde(with = "http_serde::authority")]
+    proxy_jump: axum::http::uri::Authority,
 }
 
 #[derive(Debug)]
 struct AppState {
     provider_metadata: CoreProviderMetadata, // TODO Cache this and refresh periodically
-    signing_key_path: std::path::PathBuf,
+    config: Config,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Claims {
     iss: String,
     unix_username: String,
-    projects: Vec<String>,
+    projects: HashMap<String, Vec<String>>,
     email: String,
 }
 
@@ -123,7 +133,7 @@ async fn main() -> Result<()> {
             .context("Could not build config.")?
     };
 
-    let issuer_url = IssuerUrl::from_url(config.issuer);
+    let issuer_url = IssuerUrl::from_url(config.issuer.clone());
 
     info!("Trying to access the OIDC endpoints.");
     let provider_metadata =
@@ -133,7 +143,7 @@ async fn main() -> Result<()> {
 
     let state = Arc::new(AppState {
         provider_metadata,
-        signing_key_path: config.signing_key_path,
+        config,
     });
 
     let app = Router::new()
@@ -223,10 +233,16 @@ async fn sign(
         }
         _ => (),
     };
-    let signing_key = ssh_key::PrivateKey::read_openssh_file(&state.signing_key_path)
+    let signing_key = ssh_key::PrivateKey::read_openssh_file(&state.config.signing_key_path)
         .context("Could not load signing key.")?;
 
-    let short_names = claims.projects;
+    let service = "ai.isambard".to_string(); // TODO
+    let short_names: Vec<&String> = claims
+        .projects
+        .iter()
+        .filter(|(_k, v)| v.contains(&service))
+        .map(|(k, _v)| k)
+        .collect();
     let unix_username = claims.unix_username;
 
     let projects: Vec<Project> = short_names
@@ -237,9 +253,13 @@ async fn sign(
         })
         .collect();
     let principals = projects.iter().map(|p| p.username.clone());
-    let service = "ai.isambard".to_string(); // TODO
-    let hostname = "ai-p1.access.isambard.ac.uk".parse()?; // TODO
-    let proxy_jump = "ai.login.isambard.ac.uk".parse()?; // TODO
+    let service_config = state
+        .config
+        .services
+        .get(&service)
+        .context("Service not found.")?;
+    let hostname = service_config.hostname.clone();
+    let proxy_jump = service_config.proxy_jump.clone();
     let valid_after = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)?
         .as_secs();

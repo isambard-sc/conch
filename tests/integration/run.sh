@@ -50,7 +50,7 @@ curl -X PUT http://localhost:8080/admin/realms/conch/users/profile \
       {
         "name": "projects",
         "permissions": {"view":["admin","user"],"edit":["admin"]},
-        "multivalued": true
+        "multivalued": false
       },
       {"name": "username"},
       {"name": "email"}
@@ -91,8 +91,8 @@ curl -X POST http://localhost:8080/admin/realms/conch/client-scopes/extra/protoc
       "claim.name": "projects",
       "id.token.claim": true,
       "access.token.claim": true,
-      "jsonType.label": "String",
-      "multivalued": true
+      "jsonType.label": "JSON",
+      "multivalued": false
     }
   }
 EOF
@@ -133,7 +133,7 @@ curl -X POST http://localhost:8080/admin/realms/conch/users \
     "emailVerified": true,
     "attributes": {
       "unix_username": ["test_person"],
-      "projects": ["proj1", "proj2"]
+      "projects": ["{\"proj1\": [\"ai.isambard\", \"3.isambard\"], \"proj2\": [\"ai.isambard\"]}"]
     }
   }
 EOF

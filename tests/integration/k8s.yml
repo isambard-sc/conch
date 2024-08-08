@@ -9,7 +9,9 @@ data:
   conch.toml: |
     issuer = "http://localhost:8080/realms/conch"
     signing_key_path = "/signing_key/key"
-
+    [services."ai.isambard"]
+    hostname = "ai-p1.access.isambard.ac.uk"
+    proxy_jump = "ai.login.isambard.ac.uk"
 ---
 apiVersion: v1
 kind: Pod
