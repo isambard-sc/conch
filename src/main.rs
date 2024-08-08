@@ -144,10 +144,34 @@ async fn main() -> Result<()> {
     let listener =
         tokio::net::TcpListener::bind(&std::net::SocketAddr::new("::".parse()?, args.port)).await?;
     info!("Starting server.");
-    axum::serve(listener, app).await?;
+    axum::serve(listener, app)
+        .with_graceful_shutdown(shutdown_signal())
+        .await?;
 
     info!("Exiting.");
     Ok(())
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = async {
+        #[allow(clippy::expect_used)]
+        tokio::signal::ctrl_c()
+            .await
+            .expect("failed to install Ctrl+C handler");
+    };
+
+    let terminate = async {
+        #[allow(clippy::expect_used)]
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("failed to install signal handler")
+            .recv()
+            .await;
+    };
+
+    tokio::select! {
+        _ = ctrl_c => {},
+        _ = terminate => {},
+    }
 }
 
 #[derive(Debug, Deserialize)]
