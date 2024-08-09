@@ -24,7 +24,10 @@ metadata:
 data:
   key: $(base64 --wrap=0 temp/signing_key)
 EOF
-header "Starting test pod"
+header "Templating conch helm chart"
+rm -f conch-chart.yaml
+helm template --values values.yaml ../../helm/conch > temp/conch-chart.yaml
+header "Starting keycloak pod"
 podman kube play --replace k8s.yml
 
 header "Logging in to KeyCloak"
@@ -157,3 +160,6 @@ for USERID in ${USERIDS}; do
     }
 EOF
 done
+
+header "Starting conch chart"
+podman kube play --replace temp/conch-chart.yaml

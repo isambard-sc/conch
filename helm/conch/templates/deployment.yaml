@@ -1,0 +1,47 @@
+---
+# SPDX-FileCopyrightText: © 2024 Matt Williams <matt.williams@bristol.ac.uk>
+# SPDX-License-Identifier: MIT
+apiVersion: v1
+kind: Deployment
+metadata:
+  name: conch
+  labels:
+    app: conch
+spec:
+  {{- if .Values.replicas }}
+  replicas: {{ .Values.replicas }}
+  {{- end }}
+  selector:
+    matchLabels:
+      app: conch
+  template:
+    metadata:
+      labels:
+        app: conch
+    spec:
+      containers:
+        - name: conch
+          image: {{ required "image_name must be set" .Values.image.name }}:{{ default .Chart.AppVersion .Values.image.tag }}
+          args: ["--port={{ .Values.port }}", "--config=/config/conch.toml"]
+          env:
+            - name: RUST_LOG
+              value: debug
+          ports:
+            - containerPort: {{ .Values.port }}
+            - hostPort: {{ .Values.port }}
+          volumeMounts:
+            - mountPath: {{ required "signing_key_dir must be set" .Values.signing_key_dir | quote }}
+              name: conch-signing-key-volume
+              read-only: true
+            - mountPath: "/config"
+              name: conch-config-volume
+              read-only: true
+          securityContext:
+            readOnlyRootFilesystem: true
+      volumes:
+          - name: conch-signing-key-volume
+            secret:
+              secretName: conch-signing-key-secret
+          - name: conch-config-volume
+            configMap:
+              name: conch-config

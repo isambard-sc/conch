@@ -1,0 +1,11 @@
+---
+# SPDX-FileCopyrightText: © 2024 Matt Williams <matt.williams@bristol.ac.uk>
+# SPDX-License-Identifier: MIT
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: conch-config
+data:
+  conch.toml: |
+    signing_key_path = "{{ .Values.signing_key_dir }}/key"
+    {{ .Values.config | toToml | nindent 4 }}

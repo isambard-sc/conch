@@ -1,0 +1,10 @@
+# SPDX-FileCopyrightText: © 2024 Matt Williams <matt.williams@bristol.ac.uk>
+# SPDX-License-Identifier: MIT
+---
+config: {}
+image:
+  name: conch
+  tag:  # defaults to appVersion if not set
+port: 3000
+signing_key_dir: "/signing_key"
+replicas:

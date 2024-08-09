@@ -1,0 +1,12 @@
+# SPDX-FileCopyrightText: © 2024 Matt Williams <matt.williams@bristol.ac.uk>
+# SPDX-License-Identifier: MIT
+---
+config:
+  issuer: "http://keycloak:8080/realms/conch"
+  services:
+    ai.isambard:
+      hostname: "ai-p1.access.isambard.ac.uk"
+      proxy_jump: "ai.login.isambard.ac.uk"
+image:
+  name: localhost/conch
+  tag: latest
