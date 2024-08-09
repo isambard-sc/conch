@@ -7,9 +7,11 @@
 
 set -euo pipefail
 
+header() { echo "$(tput bold)${@}$(tput sgr0)" ; }
+
 cd tests/integration
 
-echo "Creating test signing key"
+header "Creating test signing key"
 mkdir -p temp
 rm -f temp/signing_key*
 ssh-keygen -q -t ed25519 -f temp/signing_key -C '' -N ''
@@ -22,21 +24,21 @@ metadata:
 data:
   key: $(base64 --wrap=0 temp/signing_key)
 EOF
-echo "Starting test pod"
+header "Starting test pod"
 podman kube play --replace k8s.yml
 
-echo "Logging in to KeyCloak"
+header "Logging in to KeyCloak"
 TOKEN=$(
   curl --retry 60 --retry-delay 2 --retry-all-errors --no-progress-meter \
     --data "username=admin&password=admin&grant_type=password&client_id=admin-cli" \
     http://localhost:8080/realms/master/protocol/openid-connect/token |
   jq --raw-output '.access_token'
 )
-echo "Creating conch KeyCloak realm"
+header "Creating conch KeyCloak realm"
 curl -X POST http://localhost:8080/admin/realms \
   -H "Content-Type: application/json" -H "Authorization: bearer $TOKEN" --fail-with-body -w "\n"\
   --data '{"realm":"conch", "enabled": true}'
-echo "Creating custom attributes"
+header "Creating custom attributes"
 curl -X PUT http://localhost:8080/admin/realms/conch/users/profile \
   -H "Content-Type: application/json" -H "Authorization: bearer $TOKEN" --fail-with-body -w "\n"\
   --data @- << EOF
@@ -57,11 +59,11 @@ curl -X PUT http://localhost:8080/admin/realms/conch/users/profile \
     ]
   }
 EOF
-echo "Creating client scope"
+header "Creating client scope"
 curl -X POST http://localhost:8080/admin/realms/conch/client-scopes \
   -H "Content-Type: application/json" -H "Authorization: bearer $TOKEN" --fail-with-body -w "\n"\
   --data '{"id":"extra", "name":"extra", "protocol":"openid-connect"}'
-echo "Creating protocol mapper to include unix username attributes"
+header "Creating protocol mapper to include unix username attributes"
 curl -X POST http://localhost:8080/admin/realms/conch/client-scopes/extra/protocol-mappers/models \
   -H "Content-Type: application/json" -H "Authorization: bearer $TOKEN" --fail-with-body -w "\n"\
   --data @- << EOF
@@ -78,7 +80,7 @@ curl -X POST http://localhost:8080/admin/realms/conch/client-scopes/extra/protoc
     }
   }
 EOF
-echo "Creating protocol mapper to include projects attributes"
+header "Creating protocol mapper to include projects attributes"
 curl -X POST http://localhost:8080/admin/realms/conch/client-scopes/extra/protocol-mappers/models \
   -H "Content-Type: application/json" -H "Authorization: bearer $TOKEN" --fail-with-body -w "\n"\
   --data @- << EOF
@@ -96,7 +98,7 @@ curl -X POST http://localhost:8080/admin/realms/conch/client-scopes/extra/protoc
     }
   }
 EOF
-echo "Creating conch OIDC client"
+header "Creating conch OIDC client"
 curl -X POST http://localhost:8080/admin/realms/conch/clients \
   -H "Content-Type: application/json" -H "Authorization: bearer $TOKEN" --fail-with-body -w "\n"\
   --data @- << EOF
@@ -122,7 +124,7 @@ curl -X POST http://localhost:8080/admin/realms/conch/clients \
     ]
   }
 EOF
-echo "Creating test user"
+header "Creating test user"
 curl -X POST http://localhost:8080/admin/realms/conch/users \
   -H "Content-Type: application/json" -H "Authorization: bearer $TOKEN" --fail-with-body -w "\n" \
   --data @- << EOF
@@ -137,13 +139,13 @@ curl -X POST http://localhost:8080/admin/realms/conch/users \
     }
   }
 EOF
-echo "Getting user ID"
+header "Getting user ID"
 USERIDS=$(
   curl -X GET http://localhost:8080/admin/realms/conch/users \
     -H "Content-Type: application/json" -H "Authorization: bearer $TOKEN" --no-progress-meter |
   jq --raw-output '.[].id'
 )
-echo "Setting test user passwords"
+header "Setting test user passwords"
 for USERID in ${USERIDS}; do
   curl -X PUT http://localhost:8080/admin/realms/conch/users/${USERID}/reset-password \
     -H "Content-Type: application/json" -H "Authorization: bearer $TOKEN" --fail-with-body -w "\n" \

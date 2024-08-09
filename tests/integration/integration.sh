@@ -5,6 +5,8 @@ set -euo pipefail
 
 # Run the integration tests in podman.
 
+header() { echo "$(tput bold)${@}$(tput sgr0)" ; }
+
 function on_exit {
     rm -rf tests/integration/temp
     rm -f conch.log keycloak.log
@@ -23,18 +25,18 @@ function wait_for_url {
     return 0
 }
 
-echo "Starting container"
+header "Starting container"
 tests/integration/run.sh
 
-echo "Waiting server to be ready"
+header "Waiting server to be ready"
 wait_for_url "http://localhost:3000" 30
 
-echo "Logging in as test user"
+header "Logging in as test user"
 ISSUER=http://localhost:8080/realms/conch
 TOKEN=$(curl --silent --show-error --data "username=test&password=test&grant_type=password&client_id=conch" ${ISSUER}/protocol/openid-connect/token | jq --raw-output '.access_token')
 echo "Test user token: $TOKEN"
 
-echo "Generating SSH keys"
+header "Generating SSH keys"
 mkdir -p temp
 rm -f tests/integration/temp/id_*
 ssh-keygen -q -t ed25519 -N '' -f tests/integration/temp/id_ed25519
@@ -46,7 +48,7 @@ SSH_KEY_RSA_3072_PUB=$(cat tests/integration/temp/id_rsa_3072.pub)
 ssh-keygen -q -t dsa -N '' -f tests/integration/temp/id_dsa
 SSH_KEY_DSA_PUB=$(cat tests/integration/temp/id_dsa.pub)
 
-echo "Running Hurl tests"
+header "Running Hurl tests"
 hurl \
     --variable conch="http://localhost:3000" \
     --variable token="${TOKEN}" \
