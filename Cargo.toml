@@ -29,6 +29,11 @@ url = "2.5.2"
 [build-dependencies]
 built = { version = "0.7", default-features = false, features = ["git2"] }
 
+[profile.release]
+strip = true
+lto = true
+codegen-units = 1
+
 [lints.rust]
 unsafe_code = "forbid"
 unused_crate_dependencies = "warn"
