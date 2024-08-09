@@ -41,7 +41,7 @@ jobs:
       - name: Get version for Helm
         id: get_helm_version
         run: |
-          if [[ "${{ github.ref_name }}" != "master" ]]; then
+          if [[ "${{ github.ref_name }}" == "master" ]]; then
             echo version="${{ steps.get_version.outputs.version }}" >> "${GITHUB_OUTPUT}"
           else
             echo version="${{ steps.get_version.outputs.version }}.${{ github.ref_name }}" >> "${GITHUB_OUTPUT}"
