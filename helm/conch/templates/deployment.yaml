@@ -21,7 +21,7 @@ spec:
     spec:
       containers:
         - name: conch
-          image: {{ required "image_name must be set" .Values.image.name }}:{{ default .Chart.AppVersion .Values.image.tag }}
+          image: {{ print .Values.image.registry "/" }}{{ required "image_name must be set" .Values.image.name }}:{{ default .Chart.AppVersion .Values.image.tag }}
           args: ["--port={{ .Values.port }}", "--config=/config/conch.toml"]
           env:
             - name: RUST_LOG

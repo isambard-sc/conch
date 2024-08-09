@@ -8,5 +8,5 @@ config:
       hostname: "ai-p1.access.isambard.ac.uk"
       proxy_jump: "ai.login.isambard.ac.uk"
 image:
-  name: localhost/conch
+  registry: localhost
   tag: latest

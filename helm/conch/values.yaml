@@ -3,6 +3,7 @@
 ---
 config: {}
 image:
+  registry: ghcr.io/isambard-sc
   name: conch
   tag:  # defaults to appVersion if not set
 port: 3000
