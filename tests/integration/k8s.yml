@@ -7,16 +7,59 @@ metadata:
   name: conch-config
 data:
   conch.toml: |
-    issuer = "http://localhost:8080/realms/conch"
+    issuer = "http://keycloak:8080/realms/conch"
     signing_key_path = "/signing_key/key"
     [services."ai.isambard"]
     hostname = "ai-p1.access.isambard.ac.uk"
     proxy_jump = "ai.login.isambard.ac.uk"
 ---
 apiVersion: v1
-kind: Pod
+kind: Deployment
 metadata:
   name: conch
+  labels:
+    app: conch
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: conch
+  template:
+    metadata:
+      labels:
+        app: conch
+    spec:
+      containers:
+        - name: conch
+          image: localhost/conch:latest
+          args: ["--port=3000", "--config=/config/conch.toml"]
+          env:
+            - name: RUST_LOG
+              value: debug
+          ports:
+            - containerPort: 3000
+            - hostPort: 3000
+          volumeMounts:
+            - mountPath: "/signing_key"
+              name: conch-signing-key-volume
+              read-only: true
+            - mountPath: "/config"
+              name: conch-config-volume
+              read-only: true
+          securityContext:
+            readOnlyRootFilesystem: true
+      volumes:
+          - name: conch-signing-key-volume
+            secret:
+              secretName: conch-signing-key-secret
+          - name: conch-config-volume
+            configMap:
+              name: conch-config
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  name: keycloak
 spec:
   containers:
     - name: keycloak
@@ -30,28 +73,3 @@ spec:
       ports:
         - containerPort: 8080
         - hostPort: 8080
-    - name: conch
-      image: localhost/conch:latest
-      args: ["--port=3000", "--config=/config/conch.toml"]
-      env:
-        - name: RUST_LOG
-          value: debug
-      ports:
-        - containerPort: 3000
-        - hostPort: 3000
-      volumeMounts:
-        - mountPath: "/signing_key"
-          name: conch-signing-key-volume
-          read-only: true
-        - mountPath: "/config"
-          name: conch-config-volume
-          read-only: true
-      securityContext:
-        readOnlyRootFilesystem: true
-  volumes:
-      - name: conch-signing-key-volume
-        secret:
-          secretName: conch-signing-key-secret
-      - name: conch-config-volume
-        configMap:
-          name: conch-config

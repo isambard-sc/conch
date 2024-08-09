@@ -7,11 +7,12 @@ set -euo pipefail
 
 function on_exit {
     rm -rf tests/integration/temp
-    rm -f conch.log
-    podman logs conch-conch &> conch.log
-    podman logs conch-keycloak &> keycloak.log
+    rm -f conch.log keycloak.log
+    podman pod logs conch-pod &> conch.log
+    podman pod logs keycloak &> keycloak.log
     echo "Shutting down pod"
-    podman pod rm --force --time=0 conch || podman pod rm --force conch
+    podman pod rm --force --time=0 conch-pod || podman pod rm --force conch-pod
+    podman pod rm --force --time=0 keycloak || podman pod rm --force keycloak
 }
 
 trap on_exit EXIT
@@ -28,10 +29,8 @@ tests/integration/run.sh
 echo "Waiting server to be ready"
 wait_for_url "http://localhost:3000" 30
 
-echo "Getting auth issuer URL"
-ISSUER=$(curl --no-progress-meter http://localhost:3000/issuer)
-
 echo "Logging in as test user"
+ISSUER=http://localhost:8080/realms/conch
 TOKEN=$(curl --silent --show-error --data "username=test&password=test&grant_type=password&client_id=conch" ${ISSUER}/protocol/openid-connect/token | jq --raw-output '.access_token')
 echo "Test user token: $TOKEN"
 
