@@ -55,6 +55,10 @@ jobs:
           registry: ghcr.io/${{ github.repository_owner }}
           username: ${{ github.actor }}
           password: ${{ github.token }}
+      - name: Log in to Helm GHCR
+        run: echo $GITHUB_TOKEN | helm registry login "ghcr.io/${{ github.repository_owner }}" --username "${{ github.actor }}" --password-stdin
+        env:
+          GITHUB_TOKEN: "${{ github.token }}"
       - name: Publish OCI image
         id: push-to-ghcr
         uses: redhat-actions/push-to-registry@v2
@@ -69,10 +73,6 @@ jobs:
           subject-name: ghcr.io/${{ github.repository }}
           subject-digest: ${{ steps.push-to-ghcr.outputs.digest }}
           push-to-registry: true
-      - name: Log in to Helm GHCR
-        run: echo $GITHUB_TOKEN | helm registry login "ghcr.io/${{ github.repository_owner }}" --username "${{ github.actor }}" --password-stdin
-        env:
-          GITHUB_TOKEN: "${{ github.token }}"
       - name: Push Helm chart
         run: helm push "./conch-${{ steps.get_helm_version.outputs.version }}.tgz" "oci://ghcr.io/${{ github.repository_owner }}"
       - name: Store build artefacts
