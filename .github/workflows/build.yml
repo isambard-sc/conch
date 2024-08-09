@@ -36,7 +36,16 @@ jobs:
         run: oci/build.sh --release
       - name: Get version
         id: get_version
-        run: echo version="$(target/release/conch --version | tail -n1 | cut -d' ' -f 2)" >> "${GITHUB_OUTPUT}"
+        run: |
+          echo version="$(target/release/conch --version | tail -n1 | cut -d' ' -f 2)" >> "${GITHUB_OUTPUT}"
+          if [[ "${{ github.ref_name }}" != "master" ]]; then
+            echo helm_version="${{ steps.get_version.outputs.version }}" >> "${GITHUB_OUTPUT}"
+          else
+            echo helm_version="${{ steps.get_version.outputs.version }}.${{ github.ref_name }}" >> "${GITHUB_OUTPUT}"
+          fi
+      - name: package helm chart
+        run: |
+          helm package helm/conch --version "${{ steps.get_version.outputs.helm_version }}" --app-version "${{ steps.get_version.outputs.version }}"
       - name: Log in to GHCR
         uses: redhat-actions/podman-login@v1
         with:
@@ -57,6 +66,12 @@ jobs:
           subject-name: ghcr.io/${{ github.repository }}
           subject-digest: ${{ steps.push-to-ghcr.outputs.digest }}
           push-to-registry: true
+      - name: Log in to Helm GHCR
+        run: echo $GITHUB_TOKEN | helm registry login "ghcr.io/${{ github.repository_owner }}" --username "${{ github.actor }}" --password-stdin
+        env:
+          GITHUB_TOKEN: "${{ github.token }}"
+      - name: Push Helm chart
+        run: helm push "./conch-${{ steps.get_helm_version.outputs.version }}.tgz" "oci://ghcr.io/${{ github.repository_owner }}"
       - name: Store build artefacts
         uses: actions/upload-artifact@v4
         with:
