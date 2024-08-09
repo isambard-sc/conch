@@ -111,6 +111,9 @@ jobs:
       ref: ${{ needs.tag-release.outputs.ref }}
     permissions:
       contents: read
+      packages: write
+      attestations: write
+      id-token: write
 
   attest:
     name: Attest

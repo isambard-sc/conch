@@ -38,14 +38,17 @@ jobs:
         id: get_version
         run: |
           echo version="$(target/release/conch --version | tail -n1 | cut -d' ' -f 2)" >> "${GITHUB_OUTPUT}"
+      - name: Get version for Helm
+        id: get_helm_version
+        run: |
           if [[ "${{ github.ref_name }}" != "master" ]]; then
-            echo helm_version="${{ steps.get_version.outputs.version }}" >> "${GITHUB_OUTPUT}"
+            echo version="${{ steps.get_version.outputs.version }}" >> "${GITHUB_OUTPUT}"
           else
-            echo helm_version="${{ steps.get_version.outputs.version }}.${{ github.ref_name }}" >> "${GITHUB_OUTPUT}"
+            echo version="${{ steps.get_version.outputs.version }}.${{ github.ref_name }}" >> "${GITHUB_OUTPUT}"
           fi
       - name: package helm chart
         run: |
-          helm package helm/conch --version "${{ steps.get_version.outputs.helm_version }}" --app-version "${{ steps.get_version.outputs.version }}"
+          helm package helm/conch --version "${{ steps.get_helm_version.outputs.version }}" --app-version "${{ steps.get_version.outputs.version }}"
       - name: Log in to GHCR
         uses: redhat-actions/podman-login@v1
         with:
