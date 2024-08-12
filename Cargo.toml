@@ -12,7 +12,7 @@ build = "build.rs"
 anyhow = "1.0"
 axum = { version = "0.7", features = ["tracing", "query"] }
 axum-extra = { version = "0.9.3", features = ["typed-header"] }
-clap = { version = "4.5.13", features = ["derive"] }
+clap = { version = "4.5.15", features = ["derive"] }
 config = { version = "0.14.0", default-features = false, features = ["toml"] }
 http-serde = "2.1.1"
 jsonwebtoken = "9.3.0"
