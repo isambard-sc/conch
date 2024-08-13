@@ -24,9 +24,14 @@ metadata:
 data:
   key: $(base64 --wrap=0 temp/signing_key)
 EOF
+header "Getting built conch version"
+version=$(podman run conch:latest --version | tail -n1 | cut -d' ' -f 2)
+echo "${version}"
+header "Packaging helm chart"
+helm package ../../helm/conch --version "${version}" --app-version "${version}" --destination temp
 header "Templating conch helm chart"
 rm -f conch-chart.yaml
-helm template --values values.yaml ../../helm/conch > temp/conch-chart.yaml
+helm template --values values.yaml "temp/conch-${version}.tgz" > temp/conch-chart.yaml
 header "Starting keycloak pod"
 podman kube play --replace k8s.yml
 
