@@ -1,0 +1,14 @@
+---
+# SPDX-FileCopyrightText: © 2024 Matt Williams <matt.williams@bristol.ac.uk>
+# SPDX-License-Identifier: MIT
+apiVersion: v1
+kind: Service
+metadata:
+  name: conch
+spec:
+  selector:
+    app: conch
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: {{ .Values.port }}
