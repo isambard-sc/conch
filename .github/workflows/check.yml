@@ -73,3 +73,6 @@ jobs:
         run: |
           oci/build.sh
           tests/integration/integration.sh
+        env:
+          TERM: xterm
+
