@@ -50,10 +50,12 @@ struct Config {
     issuer: url::Url,
     signing_key_path: std::path::PathBuf,
     #[serde(default)]
-    services: HashMap<String, Service>,
+    services: Services,
 }
 
-#[derive(Debug, Deserialize)]
+type Services = HashMap<String, Service>;
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
 struct Service {
     #[serde(with = "http_serde::authority")]
     hostname: axum::http::uri::Authority,
@@ -141,7 +143,7 @@ async fn shutdown_signal() {
 #[derive(Debug, Deserialize, Serialize)]
 struct Claims {
     iss: String,
-    unix_username: String,
+    short_name: String,
     projects: HashMap<String, Vec<String>>,
     email: String,
 }
@@ -191,22 +193,15 @@ struct SignRequest {
 
 #[derive(Debug, Serialize)]
 struct SignResponse {
-    service: String,
+    services: Services,
     certificate: ssh_key::Certificate,
-    projects: Vec<Project>,
-    #[serde(with = "http_serde::authority")]
-    hostname: axum::http::uri::Authority,
-    #[serde(with = "http_serde::authority")]
-    proxy_jump: axum::http::uri::Authority,
+    projects: Projects,
+    short_name: String,
     user: String,
     version: u32,
 }
 
-#[derive(Debug, Serialize)]
-struct Project {
-    short_name: String,
-    username: String,
-}
+type Projects = HashMap<String, Vec<String>>;
 
 #[tracing::instrument(skip(state))]
 async fn sign(
@@ -236,30 +231,19 @@ async fn sign(
     let signing_key = ssh_key::PrivateKey::read_openssh_file(&state.config.signing_key_path)
         .context("Could not load signing key.")?;
 
-    let service = "ai.isambard".to_string(); // TODO
-    let short_names: Vec<&String> = claims
+    // TODO filter out the irrelevant services
+    let projects: Projects = claims
         .projects
         .iter()
-        .filter(|(_k, v)| v.contains(&service))
-        .map(|(k, _v)| k)
+        .map(|(k, v)| (k.clone(), v.clone()))
         .collect();
-    let unix_username = claims.unix_username;
+    let short_name = claims.short_name;
 
-    let projects: Vec<Project> = short_names
-        .iter()
-        .map(|p| Project {
-            short_name: p.to_string(),
-            username: format!("{unix_username}.{p}"),
-        })
+    let principals: Vec<String> = projects
+        .values()
+        .map(|s| s.iter().map(|s| format!("{short_name}.{}", s)))
+        .flatten()
         .collect();
-    let principals = projects.iter().map(|p| p.username.clone());
-    let service_config = state
-        .config
-        .services
-        .get(&service)
-        .context("Service not found.")?;
-    let hostname = service_config.hostname.clone();
-    let proxy_jump = service_config.proxy_jump.clone();
     let valid_after = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)?
         .as_secs();
@@ -281,7 +265,7 @@ async fn sign(
     }
     cert_builder
         .key_id(
-            serde_json::to_string(&serde_json::json!({"service":service, "projects": short_names}))
+            serde_json::to_string(&serde_json::json!({"projects": projects}))
                 .context("Could not encode JSON.")?,
         )
         .context("Could not set key ID.")?;
@@ -299,13 +283,12 @@ async fn sign(
         .context("Could not sign key.")?;
 
     let response = SignResponse {
-        service,
         certificate,
         projects,
-        hostname,
-        proxy_jump,
+        short_name,
+        services: state.config.services.clone(),
         user: claims.email,
-        version: 1,
+        version: 2,
     };
     info!(response = ?response);
     Ok(Json(response))

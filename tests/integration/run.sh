@@ -53,7 +53,7 @@ curl -X PUT http://localhost:8080/admin/realms/conch/users/profile \
   {
     "attributes": [
       {
-        "name": "unix_username",
+        "name": "short_name",
         "permissions": {"view":["admin","user"],"edit":["admin"]},
         "multivalued": false
       },
@@ -71,17 +71,17 @@ header "Creating client scope"
 curl -X POST http://localhost:8080/admin/realms/conch/client-scopes \
   -H "Content-Type: application/json" -H "Authorization: bearer $TOKEN" --fail-with-body -w "\n"\
   --data '{"id":"extra", "name":"extra", "protocol":"openid-connect"}'
-header "Creating protocol mapper to include unix username attributes"
+header "Creating protocol mapper to include short_name attribute"
 curl -X POST http://localhost:8080/admin/realms/conch/client-scopes/extra/protocol-mappers/models \
   -H "Content-Type: application/json" -H "Authorization: bearer $TOKEN" --fail-with-body -w "\n"\
   --data @- << EOF
   {
-    "name":"unix_username",
+    "name":"short_name",
     "protocol":"openid-connect",
     "protocolMapper": "oidc-usermodel-attribute-mapper",
     "config": {
-      "user.attribute": "unix_username",
-      "claim.name": "unix_username",
+      "user.attribute": "short_name",
+      "claim.name": "short_name",
       "id.token.claim": true,
       "access.token.claim": true,
       "jsonType.label": "String"
@@ -145,7 +145,7 @@ curl -X POST http://localhost:8080/admin/realms/conch/users \
     "email": "test@example.com",
     "emailVerified": true,
     "attributes": {
-      "unix_username": ["test_person"],
+      "short_name": ["test_person"],
       "projects": ["{\"proj1\": [\"ai.isambard\", \"3.isambard\"], \"proj2\": [\"ai.isambard\"]}"]
     }
   }

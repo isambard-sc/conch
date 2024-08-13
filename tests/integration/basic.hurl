@@ -14,12 +14,13 @@ Authorization: Bearer {{ token }}
 public_key: {{ ssh_key_ed25519_pub }}
 HTTP 200
 [Asserts]
-jsonpath "$.service" == "ai.isambard"
 jsonpath "$.certificate" exists
-jsonpath "$.projects[*].short_name" includes "proj1"
-jsonpath "$.projects[*].short_name" includes "proj2"
+jsonpath "$.projects['proj1']" includes "ai.isambard"
+jsonpath "$.projects['proj1']" includes "3.isambard"
+jsonpath "$.projects['proj2']" includes "ai.isambard"
+jsonpath "$.projects['proj2']" not includes "3.isambard"
 jsonpath "$.user" == "test@example.com"
-jsonpath "$.version" == 1
+jsonpath "$.version" == 2
 
 GET {{conch}}/sign
 Authorization: Bearer {{ token }}
