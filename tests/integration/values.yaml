@@ -10,3 +10,4 @@ config:
 image:
   registry: localhost
   tag: latest
+log_level: debug

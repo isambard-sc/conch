@@ -25,7 +25,7 @@ spec:
           args: ["--port={{ .Values.port }}", "--config=/config/conch.toml"]
           env:
             - name: RUST_LOG
-              value: debug
+              value: "{{ .Values.log_level }}"
           ports:
             - containerPort: {{ .Values.port }}
           volumeMounts:

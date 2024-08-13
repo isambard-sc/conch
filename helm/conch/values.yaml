@@ -8,4 +8,5 @@ image:
   tag:  # defaults to appVersion if not set
 port: 3000
 signing_key_dir: "/signing_key"
+log_level: info
 replicas:
