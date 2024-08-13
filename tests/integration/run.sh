@@ -167,4 +167,4 @@ EOF
 done
 
 header "Starting conch chart"
-podman kube play --replace temp/conch-chart.yaml
+podman kube play --replace --publish=3000:3000 temp/conch-chart.yaml
