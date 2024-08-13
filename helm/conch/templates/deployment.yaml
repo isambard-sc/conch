@@ -40,7 +40,7 @@ spec:
       volumes:
           - name: conch-signing-key-volume
             secret:
-              secretName: conch-signing-key-secret
+              secretName: "{{ .Values.ssh_signing_key_secret_name }}"
           - name: conch-config-volume
             configMap:
               name: conch-config

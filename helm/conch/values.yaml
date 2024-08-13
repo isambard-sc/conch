@@ -10,3 +10,4 @@ port: 3000
 signing_key_dir: "/signing_key"
 log_level: info
 replicas:
+ssh_signing_key_secret_name: conch-signing-key-secret
