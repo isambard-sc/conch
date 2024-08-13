@@ -28,14 +28,13 @@ spec:
               value: debug
           ports:
             - containerPort: {{ .Values.port }}
-            - hostPort: {{ .Values.port }}
           volumeMounts:
             - mountPath: {{ required "signing_key_dir must be set" .Values.signing_key_dir | quote }}
               name: conch-signing-key-volume
-              read-only: true
+              readOnly: true
             - mountPath: "/config"
               name: conch-config-volume
-              read-only: true
+              readOnly: true
           securityContext:
             readOnlyRootFilesystem: true
       volumes:
