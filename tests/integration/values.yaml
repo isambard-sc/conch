@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 ---
 config:
-  issuer: "http://keycloak:8080/realms/conch"
+  issuer: "http://localhost:8080/realms/conch"
   services:
     ai.isambard:
       hostname: "ai-p1.access.isambard.ac.uk"

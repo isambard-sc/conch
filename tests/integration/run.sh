@@ -121,6 +121,9 @@ curl -X POST http://localhost:8080/admin/realms/conch/clients \
     "standardFlowEnabled": true,
     "protocol": "openid-connect",
     "fullScopeAllowed": true,
+    "attributes": {
+      "oauth2.device.authorization.grant.enabled": true
+    },
     "defaultClientScopes": [
       "web-origins",
       "acr",
@@ -167,4 +170,4 @@ EOF
 done
 
 header "Starting conch chart"
-podman kube play --replace --publish=3000:3000 temp/conch-chart.yaml
+podman kube play --replace --network=host temp/conch-chart.yaml

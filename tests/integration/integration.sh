@@ -32,7 +32,8 @@ header "Waiting server to be ready"
 wait_for_url "http://localhost:3000" 30
 
 header "Logging in as test user"
-ISSUER=http://localhost:8080/realms/conch
+ISSUER=$(curl --silent --show-error http://localhost:3000/issuer)
+echo "Issuer: ${ISSUER}"
 TOKEN=$(curl --silent --show-error --data "username=test&password=test&grant_type=password&client_id=conch" ${ISSUER}/protocol/openid-connect/token | jq --raw-output '.access_token')
 echo "Test user token: $TOKEN"
 
