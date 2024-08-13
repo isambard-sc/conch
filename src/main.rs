@@ -70,7 +70,7 @@ struct AppState {
 #[tokio::main]
 async fn main() -> Result<()> {
     tracing_subscriber::fmt::init();
-    info!("Starting Conch SSH CA");
+    info!("Starting Conch SSH CA {}", version());
 
     let args = Args::parse();
 
