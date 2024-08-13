@@ -74,5 +74,5 @@ jobs:
           oci/build.sh
           tests/integration/integration.sh
         env:
-          TERM: xterm
+          TERM: xterm-256color
 
