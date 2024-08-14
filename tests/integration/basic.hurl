@@ -15,10 +15,11 @@ public_key: {{ ssh_key_ed25519_pub }}
 HTTP 200
 [Asserts]
 jsonpath "$.certificate" exists
-jsonpath "$.projects['proj1']" includes "ai.isambard"
-jsonpath "$.projects['proj1']" includes "3.isambard"
-jsonpath "$.projects['proj2']" includes "ai.isambard"
-jsonpath "$.projects['proj2']" not includes "3.isambard"
+jsonpath "$.projects['proj1']" includes "ai.example"
+jsonpath "$.projects['proj1']" includes "3.example"
+jsonpath "$.projects['proj2']" includes "ai.example"
+jsonpath "$.projects['proj2']" not includes "3.example"
+jsonpath "$.projects['proj2']" not includes "missing.example"
 jsonpath "$.user" == "test@example.com"
 jsonpath "$.version" == 2
 

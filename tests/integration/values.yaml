@@ -3,10 +3,13 @@
 ---
 config:
   issuer: "http://localhost:8080/realms/conch"
-  services:
-    ai.isambard:
-      hostname: "ai-p1.access.isambard.ac.uk"
-      proxy_jump: "ai.login.isambard.ac.uk"
+  platforms:
+    ai.example:
+      hostname: "ai.access.example.com"
+      proxy_jump: "login.example.com"
+    3.example:
+      hostname: "3.access.example.com"
+      proxy_jump: "login.example.com"
 image:
   registry: localhost
   tag: latest

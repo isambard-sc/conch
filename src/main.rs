@@ -23,7 +23,7 @@ use openidconnect::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use tracing::info;
+use tracing::{error, info};
 
 pub mod built_info {
     include!(concat!(env!("OUT_DIR"), "/built.rs"));
@@ -231,19 +231,34 @@ async fn sign(
     let signing_key = ssh_key::PrivateKey::read_openssh_file(&state.config.signing_key_path)
         .context("Could not load signing key.")?;
 
-    // TODO filter out the irrelevant platforms
     let projects: Projects = claims
         .projects
         .iter()
-        .map(|(k, v)| (k.clone(), v.clone()))
+        .map(|(project, platforms)| {
+            (
+                project.clone(),
+                platforms
+                    .iter()
+                    .filter(|platform| state.config.platforms.contains_key(*platform))
+                    .cloned()
+                    .collect::<Vec<String>>(),
+            )
+        })
         .collect();
     let short_name = claims.short_name;
 
     let principals: Vec<String> = projects
         .values()
-        .map(|s| s.iter().map(|s| format!("{short_name}.{}", s)))
-        .flatten()
+        .flat_map(|s| s.iter().map(|s| format!("{short_name}.{}", s)))
         .collect();
+    if principals.is_empty() {
+        error!(
+            "No valid principals from: user_projects={:?}, config_platforms={:?}",
+            &claims.projects,
+            &state.config.platforms.keys()
+        );
+        return Err(anyhow::anyhow!("No valid pricipals found after filtering.").into());
+    }
     let valid_after = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)?
         .as_secs();
