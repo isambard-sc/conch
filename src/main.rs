@@ -50,13 +50,13 @@ struct Config {
     issuer: url::Url,
     signing_key_path: std::path::PathBuf,
     #[serde(default)]
-    services: Services,
+    platforms: Platforms,
 }
 
-type Services = HashMap<String, Service>;
+type Platforms = HashMap<String, Platform>;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-struct Service {
+struct Platform {
     #[serde(with = "http_serde::authority")]
     hostname: axum::http::uri::Authority,
     #[serde(with = "http_serde::authority")]
@@ -193,7 +193,7 @@ struct SignRequest {
 
 #[derive(Debug, Serialize)]
 struct SignResponse {
-    services: Services,
+    platforms: Platforms,
     certificate: ssh_key::Certificate,
     projects: Projects,
     short_name: String,
@@ -231,7 +231,7 @@ async fn sign(
     let signing_key = ssh_key::PrivateKey::read_openssh_file(&state.config.signing_key_path)
         .context("Could not load signing key.")?;
 
-    // TODO filter out the irrelevant services
+    // TODO filter out the irrelevant platforms
     let projects: Projects = claims
         .projects
         .iter()
@@ -286,7 +286,7 @@ async fn sign(
         certificate,
         projects,
         short_name,
-        services: state.config.services.clone(),
+        platforms: state.config.platforms.clone(),
         user: claims.email,
         version: 2,
     };
