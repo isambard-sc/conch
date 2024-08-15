@@ -18,6 +18,8 @@ spec:
     metadata:
       labels:
         app: conch
+      annotations:  # Always restart the pod on a deploy to get new config
+        rollme: {{ randAlphaNum 5 | quote }}
     spec:
       containers:
         - name: conch
