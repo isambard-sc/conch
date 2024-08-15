@@ -15,7 +15,7 @@ First, create the SSH signing key and put it in a `Secret`:
 
 ```sh
 ssh-keygen -q -t ed25519 -f ssh_signing_key -C '' -N ''
-kubectl create secret generic conch-signing-key-secret --from-file=private=ssh_signing_key
+kubectl create secret generic conch-signing-key-secret --from-file=key=ssh_signing_key
 rm ssh_signing_key
 ```
 
@@ -25,8 +25,9 @@ then, you can create a `values.yaml` like:
 ---
 config:
   issuer: "https://keycloak.example.com/realms/example"
-  services:
+  platforms:
     service-one:
+      alias: "s1.example"
       hostname: "s1.example.com"
       proxy_jump: "jump.example.com"
 ```
