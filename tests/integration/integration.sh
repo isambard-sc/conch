@@ -31,12 +31,6 @@ tests/integration/run.sh
 header "Waiting server to be ready"
 wait_for_url "http://localhost:3000" 30
 
-header "Logging in as test user"
-ISSUER=$(curl --silent --show-error http://localhost:3000/issuer)
-echo "Issuer: ${ISSUER}"
-TOKEN=$(curl --silent --show-error --data "username=test&password=test&grant_type=password&client_id=conch" ${ISSUER}/protocol/openid-connect/token | jq --raw-output '.access_token')
-echo "Test user token: $TOKEN"
-
 header "Generating SSH keys"
 mkdir -p temp
 rm -f tests/integration/temp/id_*
@@ -52,7 +46,6 @@ SSH_KEY_DSA_PUB=$(cat tests/integration/temp/id_dsa.pub)
 header "Running Hurl tests"
 hurl \
     --variable conch="http://localhost:3000" \
-    --variable token="${TOKEN}" \
     --variable ssh_key_ed25519_pub="${SSH_KEY_ED25519_PUB}" \
     --variable ssh_key_rsa_2048_pub="${SSH_KEY_RSA_2048_PUB}" \
     --variable ssh_key_rsa_3072_pub="${SSH_KEY_RSA_3072_PUB}" \
