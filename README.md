@@ -32,6 +32,8 @@ config:
       proxy_jump: "jump.example.com"
 ```
 
+You should avoid making the `alias` a resolvable domain name as it will be used in SSH configs and works best if it forms its own namespace.
+
 and install the chart with:
 
 ```sh
