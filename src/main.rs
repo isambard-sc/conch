@@ -57,6 +57,8 @@ type Platforms = HashMap<String, Platform>;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 struct Platform {
+    #[serde(skip_serializing)]
+    alias: String,
     #[serde(with = "http_serde::authority")]
     hostname: axum::http::uri::Authority,
     #[serde(with = "http_serde::authority")]
@@ -231,6 +233,9 @@ async fn sign(
     let signing_key = ssh_key::PrivateKey::read_openssh_file(&state.config.signing_key_path)
         .context("Could not load signing key.")?;
 
+    // Filter the list of platforms in each project so that only those
+    // that are referenced in the relevant platforms list are kept.
+    // It also alters the platform name into its alias.
     let projects: Projects = claims
         .projects
         .iter()
@@ -239,23 +244,35 @@ async fn sign(
                 project.clone(),
                 platforms
                     .iter()
-                    .filter(|platform| state.config.platforms.contains_key(*platform))
-                    .cloned()
+                    .filter_map(|platform_name| {
+                        state
+                            .config
+                            .platforms
+                            .get(platform_name)
+                            .map(|platform| platform.alias.clone())
+                    })
                     .collect::<Vec<String>>(),
             )
         })
+        .collect();
+
+    // Mutate the platform config to have the alias as its name
+    let platforms = state
+        .config
+        .platforms
+        .values()
+        .map(|c| (c.alias.clone(), c.clone()))
         .collect();
     let short_name = claims.short_name;
 
     let principals: Vec<String> = projects
         .values()
-        .flat_map(|s| s.iter().map(|s| format!("{short_name}.{}", s)))
+        .flat_map(|ps| ps.iter().map(|p| format!("{short_name}.{}", p)))
         .collect();
     if principals.is_empty() {
         error!(
             "No valid principals from: user_projects={:?}, config_platforms={:?}",
-            &claims.projects,
-            &state.config.platforms.keys()
+            &claims.projects, &state.config.platforms
         );
         return Err(anyhow::anyhow!("No valid pricipals found after filtering.").into());
     }
@@ -301,7 +318,7 @@ async fn sign(
         certificate,
         projects,
         short_name,
-        platforms: state.config.platforms.clone(),
+        platforms,
         user: claims.email,
         version: 2,
     };

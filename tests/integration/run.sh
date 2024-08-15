@@ -146,7 +146,7 @@ curl -X POST http://localhost:8080/admin/realms/conch/users \
     "emailVerified": true,
     "attributes": {
       "short_name": ["test_person"],
-      "projects": ["{\"proj1\": [\"ai.example\", \"3.example\"], \"proj2\": [\"ai.example\", \"missing.example\"]}"]
+      "projects": ["{\"proj1\": [\"slurm.ai.example\", \"slurm.3.example\"], \"proj2\": [\"slurm.ai.example\", \"missing.example\"]}"]
     }
   }
 EOF

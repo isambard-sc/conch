@@ -4,10 +4,12 @@
 config:
   issuer: "http://localhost:8080/realms/conch"
   platforms:
-    ai.example:
+    slurm.ai.example:
+      alias: "ai.example"
       hostname: "ai.access.example.com"
       proxy_jump: "login.example.com"
-    3.example:
+    slurm.3.example:
+      alias: "3.example"
       hostname: "3.access.example.com"
       proxy_jump: "login.example.com"
 image:
