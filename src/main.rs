@@ -3,7 +3,7 @@
 
 use std::{collections::HashMap, sync::Arc};
 
-use anyhow::{anyhow, Context as _, Result};
+use anyhow::{anyhow, Context, Result};
 use axum::{
     async_trait,
     extract::{FromRequestParts, Query, State},
@@ -162,18 +162,20 @@ impl FromRequestParts<Arc<AppState>> for Claims {
         let TypedHeader(Authorization(bearer)) = parts
             .extract::<TypedHeader<Authorization<Bearer>>>()
             .await
-            .context("Could not extract Bearer header")?;
-        let kid = jwt::decode_header(bearer.token())?
-            .kid
-            .context("Could not decode KID.")?;
-        let alg = jwt::decode_header(bearer.token())?.alg;
+            .context("Could not extract Bearer header")
+            .status(axum::http::StatusCode::UNAUTHORIZED)?;
+        let header =
+            jwt::decode_header(bearer.token()).context("Could not decode bearer header")?;
+        let kid = header.kid.context("Could not decode KID.")?;
+        let alg = header.alg;
         let jwk = state
             .provider_metadata
             .jwks()
             .keys()
             .iter()
             .find(|k| k.key_id().is_some_and(|k| k.as_str() == kid))
-            .context("Could not find JWK matching KID.")?;
+            .context("Could not find JWK matching KID.")
+            .status(axum::http::StatusCode::FORBIDDEN)?;
         let jwk = serde_json::from_value(serde_json::to_value(jwk)?)?; // Convert from `openidconnect` to `jsonwebtoken`.
         let mut validation = jwt::Validation::new(alg);
         validation.set_audience(&["account"]);
@@ -333,15 +335,26 @@ async fn issuer(State(state): State<Arc<AppState>>) -> Result<String, AppError> 
 
 // Errors
 
-struct AppError(anyhow::Error);
+struct AppError(anyhow::Error, Option<axum::http::StatusCode>);
 
 impl IntoResponse for AppError {
     fn into_response(self) -> Response {
         (
-            StatusCode::INTERNAL_SERVER_ERROR,
+            self.1.unwrap_or(StatusCode::INTERNAL_SERVER_ERROR),
             Json(json!({"message":format!("Something went wrong: {:?}", self.0)})),
         )
             .into_response()
+    }
+}
+
+trait Status<T> {
+    /// Add a HTTP status code to an error.
+    fn status(self, status: axum::http::StatusCode) -> Result<T, AppError>;
+}
+
+impl<T> Status<T> for anyhow::Result<T> {
+    fn status(self, status: axum::http::StatusCode) -> Result<T, AppError> {
+        self.map_err(|e| AppError(e, Some(status)))
     }
 }
 
@@ -350,6 +363,6 @@ where
     E: Into<anyhow::Error>,
 {
     fn from(err: E) -> Self {
-        Self(err.into())
+        Self(err.into(), None)
     }
 }

@@ -34,7 +34,10 @@ HTTP 200
 test2_token: jsonpath "$.access_token"
 
 GET {{conch}}/sign
-{}
+HTTP 401
+
+GET {{conch}}/sign
+Authorization: Bearer blahblahblah
 HTTP 500
 
 GET {{conch}}/sign
