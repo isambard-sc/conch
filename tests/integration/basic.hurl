@@ -23,6 +23,16 @@ HTTP 200
 [Captures]
 test1_token: jsonpath "$.access_token"
 
+POST {{issuer}}/protocol/openid-connect/token
+[FormParams]
+username: test2
+password: test
+grant_type: password
+client_id: conch
+HTTP 200
+[Captures]
+test2_token: jsonpath "$.access_token"
+
 GET {{conch}}/sign
 {}
 HTTP 500
@@ -65,3 +75,11 @@ public_key: {{ ssh_key_dsa_pub }}
 HTTP 500
 [Asserts]
 jsonpath "$.message" contains "DSA keys are not supported"
+
+GET {{conch}}/sign
+Authorization: Bearer {{ test2_token }}
+[QueryStringParams]
+public_key: {{ ssh_key_ed25519_pub }}
+HTTP 500
+[Asserts]
+jsonpath "$.message" contains "No valid pricipals found after filtering"
