@@ -30,6 +30,10 @@ spec:
               value: {{ .Values.log_level | quote }}
           ports:
             - containerPort: {{ .Values.port }}
+          readinessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.port }}
           volumeMounts:
             - mountPath: {{ required "signing_key_dir must be set" .Values.signing_key_dir | quote }}
               name: "conch-signing-key-volume"
