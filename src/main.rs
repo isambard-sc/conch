@@ -23,7 +23,7 @@ use openidconnect::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::json;
-use tracing::{error, info};
+use tracing::{debug, error, info};
 
 pub mod built_info {
     include!(concat!(env!("OUT_DIR"), "/built.rs"));
@@ -168,6 +168,7 @@ struct Claims {
 impl FromRequestParts<Arc<AppState>> for Claims {
     type Rejection = AppError;
 
+    #[tracing::instrument(err(Debug), skip_all)]
     async fn from_request_parts(
         parts: &mut Parts,
         state: &Arc<AppState>,
@@ -221,13 +222,20 @@ struct SignResponse {
 
 type Projects = HashMap<String, Vec<String>>;
 
-#[tracing::instrument(skip(state))]
+#[tracing::instrument(
+    err(Debug),
+    skip_all,
+    fields(
+        email = claims.email,
+        fingerprint = %payload.0.public_key.fingerprint(Default::default())
+    )
+)]
 async fn sign(
     State(state): State<Arc<AppState>>,
     claims: Claims,
     payload: Query<SignRequest>,
 ) -> Result<Json<SignResponse>, AppError> {
-    info!("Signing an SSH key");
+    debug!("Signing an SSH key");
     match payload.public_key.key_data() {
         ssh_key::public::KeyData::Rsa(k) => {
             // https://github.com/RustCrypto/SSH/issues/261
@@ -338,11 +346,10 @@ async fn sign(
         user: claims.email,
         version: 2,
     };
-    info!(response = ?response);
     Ok(Json(response))
 }
 
-#[tracing::instrument(skip(state))]
+#[tracing::instrument(skip_all)]
 async fn issuer(State(state): State<Arc<AppState>>) -> Result<String, AppError> {
     Ok(state.provider_metadata.issuer().to_string())
 }
@@ -354,6 +361,7 @@ async fn health() -> Result<Json<serde_json::Value>, AppError> {
 
 // Errors
 
+#[derive(Debug)]
 struct AppError(anyhow::Error, Option<axum::http::StatusCode>);
 
 impl IntoResponse for AppError {
