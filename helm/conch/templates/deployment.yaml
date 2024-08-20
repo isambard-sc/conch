@@ -32,7 +32,7 @@ spec:
             - containerPort: {{ .Values.port }}
           readinessProbe:
             httpGet:
-              path: /
+              path: /health
               port: {{ .Values.port }}
           volumeMounts:
             - mountPath: {{ required "signing_key_dir must be set" .Values.signing_key_dir | quote }}

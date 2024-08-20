@@ -119,6 +119,7 @@ async fn main() -> Result<()> {
 
     let app = Router::new()
         .route("/", get(|| async { Json(serde_json::Value::Null) }))
+        .route("/health", get(health))
         .route("/sign", get(sign))
         .route("/issuer", get(issuer))
         .with_state(state);
@@ -344,6 +345,11 @@ async fn sign(
 #[tracing::instrument(skip(state))]
 async fn issuer(State(state): State<Arc<AppState>>) -> Result<String, AppError> {
     Ok(state.provider_metadata.issuer().to_string())
+}
+
+#[tracing::instrument(skip_all)]
+async fn health() -> Result<Json<serde_json::Value>, AppError> {
+    Ok(Json(json!({})))
 }
 
 // Errors
