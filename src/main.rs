@@ -51,6 +51,15 @@ struct Config {
     signing_key_path: std::path::PathBuf,
     #[serde(default)]
     platforms: Platforms,
+    #[serde(default)]
+    log_format: LogFormat,
+}
+
+#[derive(Debug, Deserialize, Default)]
+enum LogFormat {
+    #[default]
+    Full,
+    Json,
 }
 
 type Platforms = HashMap<String, Platform>;
@@ -73,9 +82,6 @@ struct AppState {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    tracing_subscriber::fmt::init();
-    info!("Starting Conch SSH CA {}", version());
-
     let args = Args::parse();
 
     let config: Config = {
@@ -90,6 +96,13 @@ async fn main() -> Result<()> {
             .try_deserialize()
             .context("Could not build config.")?
     };
+    let sub = tracing_subscriber::fmt()
+        .with_env_filter(tracing_subscriber::EnvFilter::from_default_env());
+    match config.log_format {
+        LogFormat::Full => sub.init(),
+        LogFormat::Json => sub.json().init(),
+    };
+    info!("Starting Conch SSH CA {}", version());
 
     let issuer_url = IssuerUrl::from_url(config.issuer.clone());
 
