@@ -7,6 +7,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ## Unreleased
 ### Added
 - Add a health check endpoint
+- Added a readiness probe to Kubernetes manifest
+- Allow setting the log format to JSON
+
+### Changed
+- Run the service as a non-root user
 
 ## [0.1.2] - 2024-08-15
 ### Changed
