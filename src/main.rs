@@ -260,6 +260,7 @@ async fn sign(
     // Filter the list of platforms in each project so that only those
     // that are referenced in the relevant platforms list are kept.
     // It also alters the platform name into its alias.
+    // Finally remove any projects which now have an empty list of platforms.
     let projects: Projects = claims
         .projects
         .iter()
@@ -278,6 +279,7 @@ async fn sign(
                     .collect::<Vec<String>>(),
             )
         })
+        .filter(|(_, platforms)| !platforms.is_empty())
         .collect();
 
     // Mutate the platform config to have the alias as its name
@@ -290,8 +292,8 @@ async fn sign(
     let short_name = claims.short_name;
 
     let principals: Vec<String> = projects
-        .values()
-        .flat_map(|ps| ps.iter().map(|p| format!("{short_name}.{}", p)))
+        .keys()
+        .map(|p| format!("{short_name}.{}", p))
         .collect();
     if principals.is_empty() {
         error!(
