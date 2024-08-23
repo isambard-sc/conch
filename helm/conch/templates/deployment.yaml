@@ -18,8 +18,8 @@ spec:
     metadata:
       labels:
         {{- include "conch.labels" . | indent 8 }}
-      annotations:  # Always restart the pod on a deploy to get new config
-        rollme: {{ randAlphaNum 5 | quote }}
+      annotations:
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha1sum }}  # restart if config changed
     spec:
       containers:
         - name: conch

@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
+### Changed
+- [helm] Restart the pod only if the hash of the config has changed.
 
 ## [0.1.4] - 2024-08-20
 ### Fixed
@@ -21,7 +23,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [0.1.2] - 2024-08-15
 ### Changed
-- Port to new claims format and change cetificate response to match. Now version 2.
+- Port to new claims format and change certificate response to match. Now version 2.
 - Filter out irrelevant platforms.
 
 ## [0.1.1] - 2024-08-13
