@@ -9,12 +9,17 @@ Conch is an SSH CA for use in AIRR sites.
 
 ## Installation
 
+Conch can be deployed in a few different way, but all require a private SSH signeing key to be created:
+
+```sh
+ssh-keygen -q -t ed25519 -f ssh_signing_key -C '' -N ''
+```
+
 ### Helm
 
 First, create the SSH signing key and put it in a `Secret`:
 
 ```sh
-ssh-keygen -q -t ed25519 -f ssh_signing_key -C '' -N ''
 kubectl create secret generic conch-signing-key-secret --from-file=key=ssh_signing_key
 rm ssh_signing_key
 ```
@@ -44,13 +49,7 @@ helm upgrade conch oci://ghcr.io/isambard-sc/charts/conch --version x.y.z --inst
 
 Conch can be deployed as a container using e.g. Podman.
 
-First, create the private SSH signing key:
-
-```sh
-ssh-keygen -q -t ed25519 -f ssh_signing_key -C '' -N ''
-```
-
-Then set up the config file:
+Set up the config file:
 
 ```toml
 signing_key_path = "/signing_key"
@@ -78,7 +77,7 @@ podman run \
 Conch can be run as a simple binary.
 They can be downloaded from [releases].
 
-Create the signing key and config file as above (editing the config file to point to the local location of the signing key).
+Create the config file as above (editing it to point to the local location of the signing key).
 You can then run it with:
 
 ```sh
