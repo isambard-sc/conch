@@ -66,12 +66,15 @@ type Platforms = HashMap<String, Platform>;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 struct Platform {
+    /// The short name that will be used in e.g. a SSH host alias
     #[serde(skip_serializing)]
     alias: String,
+    /// The actual hostname of the platform's SSH server.
     #[serde(with = "http_serde::authority")]
     hostname: axum::http::uri::Authority,
-    #[serde(with = "http_serde::authority")]
-    proxy_jump: axum::http::uri::Authority,
+    /// The hostname of the SSH jumpy host.
+    #[serde(with = "http_serde::option::authority")]
+    proxy_jump: Option<axum::http::uri::Authority>,
 }
 
 #[derive(Debug)]

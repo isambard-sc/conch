@@ -8,6 +8,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ### Changed
 - [helm] Restart the pod only if the hash of the config has changed.
 
+### Added
+- Make the proxy_jump optional.
+
 ## [0.1.4] - 2024-08-20
 ### Fixed
 - Pricipals are based on project, not platform.
