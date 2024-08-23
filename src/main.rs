@@ -62,13 +62,18 @@ enum LogFormat {
     Json,
 }
 
-type Platforms = HashMap<String, Platform>;
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Deserialize, Serialize)]
+struct PlatformName(String);
+
+type Platforms = HashMap<PlatformName, Platform>;
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+struct PlatformAlias(String);
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 struct Platform {
     /// The short name that will be used in e.g. a SSH host alias
-    #[serde(skip_serializing)]
-    alias: String,
+    alias: PlatformAlias,
     /// The actual hostname of the platform's SSH server.
     #[serde(with = "http_serde::authority")]
     hostname: axum::http::uri::Authority,
@@ -159,11 +164,16 @@ async fn shutdown_signal() {
     }
 }
 
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Deserialize, Serialize)]
+struct ProjectName(String);
+
+type Projects = HashMap<ProjectName, Vec<PlatformName>>;
+
 #[derive(Debug, Deserialize, Serialize)]
 struct Claims {
     iss: String,
     short_name: String,
-    projects: HashMap<String, Vec<String>>,
+    projects: Projects,
     email: String,
 }
 
@@ -223,8 +233,6 @@ struct SignResponse {
     version: u32,
 }
 
-type Projects = HashMap<String, Vec<String>>;
-
 #[tracing::instrument(
     err(Debug),
     skip_all,
@@ -262,7 +270,6 @@ async fn sign(
 
     // Filter the list of platforms in each project so that only those
     // that are referenced in the relevant platforms list are kept.
-    // It also alters the platform name into its alias.
     // Finally remove any projects which now have an empty list of platforms.
     let projects: Projects = claims
         .projects
@@ -272,31 +279,21 @@ async fn sign(
                 project.clone(),
                 platforms
                     .iter()
-                    .filter_map(|platform_name| {
-                        state
-                            .config
-                            .platforms
-                            .get(platform_name)
-                            .map(|platform| platform.alias.clone())
-                    })
-                    .collect::<Vec<String>>(),
+                    .filter(|platform_name| state.config.platforms.contains_key(platform_name))
+                    .cloned()
+                    .collect::<Vec<PlatformName>>(),
             )
         })
         .filter(|(_, platforms)| !platforms.is_empty())
         .collect();
 
     // Mutate the platform config to have the alias as its name
-    let platforms = state
-        .config
-        .platforms
-        .values()
-        .map(|c| (c.alias.clone(), c.clone()))
-        .collect();
+    let platforms = state.config.platforms.clone();
     let short_name = claims.short_name;
 
     let principals: Vec<String> = projects
         .keys()
-        .map(|p| format!("{short_name}.{}", p))
+        .map(|p| format!("{short_name}.{}", p.0))
         .collect();
     if principals.is_empty() {
         error!(

@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ### Changed
 - [helm] Restart the pod only if the hash of the config has changed.
+- Keep the platform name intact and return the alias.
 
 ## [0.1.4] - 2024-08-20
 ### Fixed
