@@ -19,7 +19,7 @@ spec:
       labels:
         {{- include "conch.labels" . | indent 8 }}
       annotations:
-        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha1sum }}  # restart if config changed
+        checksum/config: {{ pick (include (print $.Template.BasePath "/configmap.yaml") . | fromYaml) "data" | toString | sha1sum }}  # restart if config changed
     spec:
       containers:
         - name: conch
