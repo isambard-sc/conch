@@ -22,11 +22,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ## [0.1.3] - 2024-08-20
 ### Added
 - Add a health check endpoint.
-- Added a readiness probe to Kubernetes manifest.
 - Allow setting the log format to JSON.
+- [helm] Added a readiness probe to Kubernetes manifest.
 
 ### Changed
-- Run the service as a non-root user
+- [helm] Run the service as a non-root user
 
 ## [0.1.2] - 2024-08-15
 ### Changed
@@ -35,14 +35,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ## [0.1.1] - 2024-08-13
 ### Added
-- Add Kubernetes Service to Helm chart.
 - Make logging level configurable, and default to `info`.
 - Make SSH signing key secret name configurable.
-- Remove `ports.hostPort` from `Deployment`.
+- [helm] Add Kubernetes Service to Helm chart.
+- [helm] Remove `ports.hostPort` from `Deployment`.
 
 ### Fixed
-- Correct `apiVersion` for `Deployment`.
-- `volumeMounts.read-only` → `volumeMounts.readOnly`
+- [helm] Correct `apiVersion` for `Deployment`.
+- [helm] `volumeMounts.read-only` → `volumeMounts.readOnly`
 
 ## [0.1.0] - 2024-08-09
 ### Added
