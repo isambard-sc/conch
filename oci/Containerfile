@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: © 2024 Matt Williams <matt.williams@bristol.ac.uk>
 # SPDX-License-Identifier: MIT
 
-FROM gcr.io/distroless/cc-debian12
+FROM gcr.io/distroless/static-debian12
 COPY conch /
 USER 65534:65534
 ENTRYPOINT ["/conch"]

@@ -9,7 +9,7 @@ function artifact_path {
   echo "${1}" | jq --raw-output 'select(.reason == "compiler-artifact") | select(.target.name == "'"${2}"'") | .executable'
 }
 
-out=$(cargo build --message-format=json ${@-})
+out=$(cargo build --target=x86_64-unknown-linux-musl --message-format=json ${@-})
 cp "$(artifact_path "${out}" "conch")" oci
 
 cd oci

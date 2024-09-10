@@ -50,10 +50,13 @@ jobs:
         with:
           ref: ${{ inputs.ref }}
           fetch-depth: 0  # This is needed so that git-describe works properly to set the version
+      - name: install MUSL
+        run: sudo apt install musl-tools
       - name: Install toolchain
         uses: dtolnay/rust-toolchain@v1
         with:
           toolchain: stable
+          targets: x86_64-unknown-linux-musl
           components: clippy, rustfmt
       - name: Install Hurl
         run: |
