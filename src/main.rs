@@ -289,6 +289,10 @@ async fn sign(
 
     // Mutate the platform config to have the alias as its name
     let platforms = state.config.platforms.clone();
+    if claims.short_name.is_empty() {
+        return Err(anyhow::anyhow!("User short name is empty.").into())
+            .status(axum::http::StatusCode::BAD_REQUEST);
+    }
     let short_name = claims.short_name;
 
     let principals: Vec<String> = projects
