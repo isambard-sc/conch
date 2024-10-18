@@ -21,7 +21,7 @@ use jsonwebtoken as jwt;
 use openidconnect::{
     core::CoreProviderMetadata, reqwest::async_http_client, IssuerUrl, JsonWebKey as _,
 };
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::json;
 use tracing::{debug, error, info};
 
@@ -169,12 +169,31 @@ struct ProjectName(String);
 
 type Projects = HashMap<ProjectName, Vec<PlatformName>>;
 
-#[derive(Debug, Deserialize, Serialize)]
-struct Claims {
-    iss: String,
-    short_name: String,
-    projects: Projects,
-    email: String,
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Deserialize, Serialize)]
+struct Claims(serde_json::Value);
+
+impl Claims {
+    fn parse<T: DeserializeOwned>(&self, claim_name: &ClaimName) -> Result<T> {
+        serde_json::from_value(
+            self.0
+                .get(&claim_name.0)
+                .context(format!("{} claim not present", &claim_name.0))?
+                .clone(),
+        )
+        .context("TODO")
+    }
+
+    fn email(&self) -> Result<String> {
+        self.parse(&ClaimName::new("email"))
+    }
+
+    fn short_name(&self) -> Result<String> {
+        self.parse(&ClaimName::new("short_name"))
+    }
+
+    fn projects(&self) -> Result<Projects> {
+        self.parse(&ClaimName::new("projects"))
+    }
 }
 
 #[async_trait]
@@ -233,11 +252,20 @@ struct SignResponse {
     version: u32,
 }
 
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Deserialize)]
+struct ClaimName(String);
+
+impl ClaimName {
+    fn new<S: Into<String>>(claim_name: S) -> Self {
+        ClaimName(claim_name.into())
+    }
+}
+
 #[tracing::instrument(
     err(Debug),
     skip_all,
     fields(
-        email = claims.email,
+        email = claims.email()?,
         fingerprint = %payload.0.public_key.fingerprint(Default::default())
     )
 )]
@@ -271,8 +299,10 @@ async fn sign(
     // Filter the list of platforms in each project so that only those
     // that are referenced in the relevant platforms list are kept.
     // Finally remove any projects which now have an empty list of platforms.
-    let projects: Projects = claims
-        .projects
+    let all_projects: Projects = claims
+        .projects()
+        .status(axum::http::StatusCode::BAD_REQUEST)?;
+    let projects: Projects = all_projects
         .iter()
         .map(|(project, platforms)| {
             (
@@ -300,7 +330,7 @@ async fn sign(
     if principals.is_empty() {
         error!(
             "No valid principals from: user_projects={:?}, config_platforms={:?}",
-            &claims.projects, &state.config.platforms
+            &all_projects, &state.config.platforms
         );
         return Err(anyhow::anyhow!("No valid principals found after filtering.").into());
     }
@@ -324,10 +354,7 @@ async fn sign(
             .context("Could not set valid principal.")?;
     }
     cert_builder
-        .key_id(
-            serde_json::to_string(&serde_json::json!({"projects": projects}))
-                .context("Could not encode JSON.")?,
-        )
+        .key_id(claims.email()?)
         .context("Could not set key ID.")?;
     cert_builder
         .extension("permit-agent-forwarding", "")
@@ -345,9 +372,9 @@ async fn sign(
     let response = SignResponse {
         certificate,
         projects,
-        short_name,
+        short_name: claims.short_name()?,
         platforms,
-        user: claims.email,
+        user: claims.email()?,
         version: 2,
     };
     Ok(Json(response))
