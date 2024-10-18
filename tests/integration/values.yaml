@@ -12,6 +12,8 @@ config:
       alias: "3.example"
       hostname: "3.access.example.com"
       proxy_jump: "login.example.com"
+  mappers:
+    - project_infra: "v1"
 image:
   registry: localhost
   tag: latest

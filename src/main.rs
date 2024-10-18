@@ -53,6 +53,7 @@ struct Config {
     platforms: Platforms,
     #[serde(default)]
     log_format: LogFormat,
+    mappers: Vec<Mapper>,
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -252,12 +253,47 @@ struct SignResponse {
     version: u32,
 }
 
+#[derive(Debug, Deserialize)]
+enum ProjectInfraVersion {
+    V1,
+}
+
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Deserialize)]
 struct ClaimName(String);
 
 impl ClaimName {
     fn new<S: Into<String>>(claim_name: S) -> Self {
         ClaimName(claim_name.into())
+    }
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum Mapper {
+    ProjectInfra(ProjectInfraVersion),
+    Single(ClaimName),
+    List(ClaimName),
+}
+
+impl Mapper {
+    fn map(&self, claims: &Claims, projects: &Projects) -> Result<Vec<String>> {
+        match self {
+            Mapper::ProjectInfra(version) => match version {
+                ProjectInfraVersion::V1 => {
+                    let short_name = claims.short_name()?;
+                    if short_name.is_empty() {
+                        return Err(anyhow::anyhow!("User short name is empty."));
+                    }
+                    let principals: Vec<String> = projects
+                        .keys()
+                        .map(|p| format!("{}.{}", short_name, p.0))
+                        .collect();
+                    Ok(principals)
+                }
+            },
+            Mapper::Single(claim_name) => Ok(vec![claims.parse(claim_name)?]),
+            Mapper::List(claim_name) => claims.parse(claim_name),
+        }
     }
 }
 
@@ -317,16 +353,16 @@ async fn sign(
         .filter(|(_, platforms)| !platforms.is_empty())
         .collect();
     let platforms = state.config.platforms.clone();
-    if claims.short_name.is_empty() {
-        return Err(anyhow::anyhow!("User short name is empty.").into())
-            .status(axum::http::StatusCode::BAD_REQUEST);
-    }
-    let short_name = claims.short_name;
 
-    let principals: Vec<String> = projects
-        .keys()
-        .map(|p| format!("{short_name}.{}", p.0))
-        .collect();
+    let principals = state
+        .config
+        .mappers
+        .iter()
+        .map(|m| m.map(&claims, &projects))
+        .collect::<Result<Vec<_>>>()
+        .status(axum::http::StatusCode::BAD_REQUEST)?;
+    let principals: Vec<_> = principals.iter().flatten().collect();
+
     if principals.is_empty() {
         error!(
             "No valid principals from: user_projects={:?}, config_platforms={:?}",
