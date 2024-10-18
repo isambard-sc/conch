@@ -77,7 +77,7 @@ struct Platform {
     /// The actual hostname of the platform's SSH server.
     #[serde(with = "http_serde::authority")]
     hostname: axum::http::uri::Authority,
-    /// The hostname of the SSH jumpy host.
+    /// The hostname of the SSH jump host.
     #[serde(with = "http_serde::option::authority")]
     proxy_jump: Option<axum::http::uri::Authority>,
 }
@@ -286,8 +286,6 @@ async fn sign(
         })
         .filter(|(_, platforms)| !platforms.is_empty())
         .collect();
-
-    // Mutate the platform config to have the alias as its name
     let platforms = state.config.platforms.clone();
     if claims.short_name.is_empty() {
         return Err(anyhow::anyhow!("User short name is empty.").into())
@@ -304,7 +302,7 @@ async fn sign(
             "No valid principals from: user_projects={:?}, config_platforms={:?}",
             &claims.projects, &state.config.platforms
         );
-        return Err(anyhow::anyhow!("No valid pricipals found after filtering.").into());
+        return Err(anyhow::anyhow!("No valid principals found after filtering.").into());
     }
     let valid_after = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)?

@@ -87,4 +87,4 @@ Authorization: Bearer {{ test2_token }}
 public_key: {{ ssh_key_ed25519_pub }}
 HTTP 500
 [Asserts]
-jsonpath "$.message" contains "No valid pricipals found after filtering"
+jsonpath "$.message" contains "No valid principals found after filtering"
