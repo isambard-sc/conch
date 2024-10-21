@@ -1,9 +1,6 @@
 # SPDX-FileCopyrightText: © 2024 Matt Williams <matt.williams@bristol.ac.uk>
 # SPDX-License-Identifier: CC0-1.0
 
-/target
-results
-*.log
-tests/integration/temp
-/build/
-/venv/
+sphinx~=8.1
+sphinx-autobuild>=2024.10
+furo>=2024.8
