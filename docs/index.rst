@@ -193,6 +193,7 @@ The native configuration format for Conch is a `TOML`_ file, passed as a command
    The available options are:
 
    .. confval:: single
+      :type: String
 
       A claim containing a single string should be placed verbatim into the principal list.
 
@@ -202,6 +203,7 @@ The native configuration format for Conch is a `TOML`_ file, passed as a command
          single = "email"
 
    .. confval:: list
+      :type: String
 
       A claim containing a JSON list of strings, each of which will be mapped directly into the principal list.
 
@@ -211,11 +213,13 @@ The native configuration format for Conch is a `TOML`_ file, passed as a command
          list = "names"
 
    .. confval:: project_infra
+      :type: String
 
-      This will generate a list of principals of the form ``<short_name>.<project-name>``.
-      The prefix ``<short_name>`` comes from a string claim ``short_name`` and the ``<project-name>`` comes from each of the project names defined in the ``projects`` claim.
+      This will generate a principal for each of the projects passed in.
 
-      Currently the only valid value for ``project_infra`` is ``"v1"``.
+      ``"v1"``
+         Create principals of the form ``<short_name>.<project-name>``.
+         The prefix ``<short_name>`` comes from a string claim ``short_name`` and the ``<project-name>`` comes from each of the project names defined in the ``projects`` claim.
 
       .. code-block:: toml
 
