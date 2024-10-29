@@ -131,6 +131,7 @@ async fn main() -> Result<()> {
         .route("/health", get(health))
         .route("/sign", get(sign))
         .route("/issuer", get(issuer))
+        .route("/public_key", get(public_key))
         .with_state(state);
     let listener =
         tokio::net::TcpListener::bind(&std::net::SocketAddr::new("::".parse()?, args.port)).await?;
@@ -419,6 +420,30 @@ async fn sign(
 #[tracing::instrument(skip_all)]
 async fn issuer(State(state): State<Arc<AppState>>) -> Result<String, AppError> {
     Ok(state.provider_metadata.issuer().to_string())
+}
+
+#[derive(Debug)]
+struct PublicKeyResponse {
+    public_key: ssh_key::PublicKey,
+}
+
+impl IntoResponse for PublicKeyResponse {
+    fn into_response(self) -> Response {
+        match self.public_key.to_openssh() {
+            Ok(k) => Response::new(axum::body::Body::new(k)),
+            Err(e) => AppError(e.into(), Some(StatusCode::INTERNAL_SERVER_ERROR)).into_response(),
+        }
+    }
+}
+
+#[tracing::instrument(skip_all)]
+async fn public_key(State(state): State<Arc<AppState>>) -> Result<PublicKeyResponse, AppError> {
+    let public_key = {
+        let signing_key = ssh_key::PrivateKey::read_openssh_file(&state.config.signing_key_path)
+            .context("Could not load signing key.")?;
+        signing_key.public_key().clone()
+    };
+    Ok(PublicKeyResponse { public_key })
 }
 
 #[tracing::instrument(skip_all)]

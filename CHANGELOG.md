@@ -9,6 +9,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Make the claim→principal mapping configurable.
   There is no longer any default mapper so no principals will be set unless you set one in the config.
 
+### Added
+- Add a `/public_key` endpoint to retrieve the currently-used public key
+
 ## [0.1.9] - 2024-09-18
 ### Fixed
 - Raise error if the user's short name is not set.

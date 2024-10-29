@@ -11,6 +11,11 @@ issuer: body
 [Asserts]
 body == "http://localhost:8080/realms/conch"
 
+GET {{conch}}/public_key
+HTTP 200
+[Asserts]
+body startsWith "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5"
+
 POST {{issuer}}/protocol/openid-connect/token
 [FormParams]
 username: test
