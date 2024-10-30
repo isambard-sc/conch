@@ -4,6 +4,9 @@
 GET {{conch}}
 HTTP 200
 
+GET {{conch}}/health
+HTTP 200
+
 GET {{conch}}/issuer
 HTTP 200
 [Captures]

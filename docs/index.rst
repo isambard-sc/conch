@@ -10,6 +10,7 @@ Conch
 
    install
    config
+   api
 
 Conch is an `SSH certificate`_ issuer which authenticates using OIDC access tokens.
 
@@ -32,6 +33,3 @@ Glossary
       A configurable function which takes claims and creates principals in the SSH certificate.
 
 .. _SSH certificate: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.certkeys?rev=HEAD
-.. _OpenID Provider Issuer discovery: https://openid.net/specs/openid-connect-discovery-1_0.html
-.. _SSH config Host: https://man.openbsd.org/ssh_config#Host
-.. _TOML: https://toml.io

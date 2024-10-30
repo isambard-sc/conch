@@ -132,3 +132,6 @@ The native configuration format for Conch is a `TOML`_ file, passed as a command
         - single: "short_name"
         - list: "names"
 
+.. _OpenID Provider Issuer discovery: https://openid.net/specs/openid-connect-discovery-1_0.html
+.. _SSH config Host: https://man.openbsd.org/ssh_config#Host
+.. _TOML: https://toml.io

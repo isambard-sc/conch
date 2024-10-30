@@ -45,12 +45,13 @@ SSH_KEY_DSA_PUB=$(cat tests/integration/temp/id_dsa.pub)
 
 header "Running Hurl tests"
 hurl \
+    tests/integration/*.hurl \
     --variable conch="http://localhost:3000" \
     --variable ssh_key_ed25519_pub="${SSH_KEY_ED25519_PUB}" \
     --variable ssh_key_rsa_2048_pub="${SSH_KEY_RSA_2048_PUB}" \
     --variable ssh_key_rsa_3072_pub="${SSH_KEY_RSA_3072_PUB}" \
     --variable ssh_key_dsa_pub="${SSH_KEY_DSA_PUB}" \
-    --test tests/integration/*.hurl \
+    --test \
     --report-html results \
     --error-format long \
     --color

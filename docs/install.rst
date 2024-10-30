@@ -76,6 +76,8 @@ All the methods above require an OIDC issuer to be specified.
 Any client communicating with Conch (e.g. `Clifton`_) will need to provide an access token (in JWT format) which Conch will validate against the issuer.
 This means that the issuer that the client uses must match the issuer configured in Conch.
 
+.. _claims:
+
 Claims required
 ~~~~~~~~~~~~~~~
 
