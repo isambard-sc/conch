@@ -20,7 +20,10 @@ release = tomllib.loads((Path(__file__).resolve().parent.parent / "Cargo.toml").
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
-extensions = ["sphinxcontrib.httpdomain"]
+extensions = [
+    "sphinxcontrib.httpdomain",
+    "sphinxcontrib.mermaid",
+]
 
 templates_path = ['_templates']
 exclude_patterns = []

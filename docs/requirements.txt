@@ -5,3 +5,4 @@ sphinx~=8.1
 sphinx-autobuild>=2024.10
 furo>=2024.8
 sphinxcontrib-httpdomain>=1.8.1
+sphinxcontrib-mermaid>=1.0
