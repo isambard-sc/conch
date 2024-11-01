@@ -6,11 +6,21 @@ Configuration
 
 The native configuration format for Conch is a `TOML`_ file, passed as a command-line argument ``--config``.
 
+If you are installing Conch via Helm with a ``values.yaml`` then these settings can be set under the ``config`` key, e.g.:
+
+.. code-block:: yaml
+
+   config:
+     issuer: "https://example.com"
+
+All the examples below show the syntax for both.
+
 .. confval:: issuer
    :type: String (URL)
 
    This must be set as a string containing the URL of the OIDC issuer.
-   For example, this could be set to ``https://keycloak.example.com/realms/example``.
+   It should be the path that contains the ``.well-known/openid-configuration`` location.
+   For example, this could be set to ``https://keycloak.example.com/realms/example`` (such that ``https://keycloak.example.com/realms/example/.well-known/openid-configuration`` exists).
    The issuer must support `OpenID Provider Issuer discovery`_.
 
 .. confval:: signing_key_path
@@ -39,33 +49,35 @@ The native configuration format for Conch is a `TOML`_ file, passed as a command
 
    For example, it might look like:
 
-   .. code-block:: toml
-      :caption: ``config.toml``
+   .. tabs::
 
-      [platforms."batch.cluster1.example"]
-      alias = "cluster1.example"
-      hostname = "1.access.example.com"
-      proxy_jump = "bastion.example.com"
+      .. group-tab:: ``config.toml``
 
-      [platforms."batch.cluster2.example"]
-      alias = "cluster2.example"
-      hostname = "2.access.example.com"
-      proxy_jump = "bastion.example.com"
+         .. code-block:: toml
 
-   or, if configuring Conch via Helm, in YAML form:
+            [platforms."batch.cluster1.example"]
+            alias = "cluster1.example"
+            hostname = "1.access.example.com"
+            proxy_jump = "bastion.example.com"
 
-   .. code-block:: yaml
-      :caption: ``values.yaml``
+            [platforms."batch.cluster2.example"]
+            alias = "cluster2.example"
+            hostname = "2.access.example.com"
+            proxy_jump = "bastion.example.com"
 
-      platforms:
-        batch.cluster1.example:
-          alias: "cluster1.example"
-          hostname: "1.access.example.com"
-          proxy_jump: "bastion.example.com"
-        batch.cluster2.example:
-          alias: "cluster2.example"
-          hostname: "2.access.example.com"
-          proxy_jump: "bastion.example.com"
+      .. group-tab:: ``values.yaml``
+
+         .. code-block:: yaml
+
+            platforms:
+              batch.cluster1.example:
+                alias: "cluster1.example"
+                hostname: "1.access.example.com"
+                proxy_jump: "bastion.example.com"
+              batch.cluster2.example:
+                alias: "cluster2.example"
+                hostname: "2.access.example.com"
+                proxy_jump: "bastion.example.com"
 
 .. confval:: mappers
    :type: Array of Tables
@@ -79,20 +91,42 @@ The native configuration format for Conch is a `TOML`_ file, passed as a command
 
       A claim containing a single string should be placed verbatim into the principal list.
 
-      .. code-block:: toml
+      .. tabs::
 
-         [[mappers]]
-         single = "email"
+         .. group-tab:: ``config.toml``
+
+            .. code-block:: toml
+
+               [[mappers]]
+               single = "email"
+
+         .. group-tab:: ``values.yaml``
+
+            .. code-block:: yaml
+
+               mappers:
+                 - single: "email"
 
    .. confval:: list
       :type: String
 
       A claim containing a JSON list of strings, each of which will be mapped directly into the principal list.
 
-      .. code-block:: toml
+      .. tabs::
 
-         [[mappers]]
-         list = "names"
+         .. group-tab:: ``config.toml``
+
+            .. code-block:: toml
+
+               [[mappers]]
+               list = "names"
+
+         .. group-tab:: ``values.yaml``
+
+            .. code-block:: yaml
+
+               mappers:
+                 - list: "names"
 
    .. confval:: project_infra
       :type: String
@@ -103,34 +137,47 @@ The native configuration format for Conch is a `TOML`_ file, passed as a command
          Create principals of the form ``<short_name>.<project-name>``.
          The prefix ``<short_name>`` comes from a string claim ``short_name`` and the ``<project-name>`` comes from each of the project names defined in the ``projects`` claim.
 
-      .. code-block:: toml
+      .. tabs::
 
-         [[mappers]]
-         project_infra = "v1"
+         .. group-tab:: ``config.toml``
+
+            .. code-block:: toml
+
+               [[mappers]]
+               project_infra = "v1"
+
+         .. group-tab:: ``values.yaml``
+
+            .. code-block:: yaml
+
+               mappers:
+                 - project_infra: "v1"
 
    You can set as many mappers as you like, just repeat the table:
 
-   .. code-block:: toml
-      :caption: ``config.toml``
+   .. tabs::
 
-      [[mappers]]
-      single = "email"
+      .. group-tab:: ``config.toml``
 
-      [[mappers]]
-      single = "short_name"
+         .. code-block:: toml
 
-      [[mappers]]
-      list = "names"
+            [[mappers]]
+            single = "email"
 
-   Or, if configuring Conch via Helm, the YAML would look like:
+            [[mappers]]
+            single = "short_name"
 
-   .. code-block:: yaml
-      :caption: ``values.yaml``
+            [[mappers]]
+            list = "names"
 
-      mappers:
-        - single: "email"
-        - single: "short_name"
-        - list: "names"
+      .. group-tab:: ``values.yaml``
+
+         .. code-block:: yaml
+
+            mappers:
+              - single: "email"
+              - single: "short_name"
+              - list: "names"
 
 .. _OpenID Provider Issuer discovery: https://openid.net/specs/openid-connect-discovery-1_0.html
 .. _SSH config Host: https://man.openbsd.org/ssh_config#Host

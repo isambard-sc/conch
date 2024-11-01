@@ -23,6 +23,7 @@ release = tomllib.loads((Path(__file__).resolve().parent.parent / "Cargo.toml").
 extensions = [
     "sphinxcontrib.httpdomain",
     "sphinxcontrib.mermaid",
+    "sphinx_tabs.tabs",
 ]
 
 templates_path = ['_templates']
