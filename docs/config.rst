@@ -20,8 +20,14 @@ All the examples below show the syntax for both.
 
    This must be set as a string containing the URL of the OIDC issuer.
    It should be the path that contains the ``.well-known/openid-configuration`` location.
-   For example, this could be set to ``https://keycloak.example.com/realms/example`` (such that ``https://keycloak.example.com/realms/example/.well-known/openid-configuration`` exists).
+   For example, this could be set to ``"https://keycloak.example.com/realms/example"`` (such that ``https://keycloak.example.com/realms/example/.well-known/openid-configuration`` exists).
    The issuer must support `OpenID Provider Issuer discovery`_.
+
+.. confval:: client_id
+   :type: String
+
+   The OIDC client ID that is configured at :confval:`issuer`.
+   For example, it could be set to ``"clifton"``.
 
 .. confval:: signing_key_path
    :type: String (path)

@@ -83,6 +83,25 @@ Conch provides a HTTP API to perform signing requests.
 
       https://keycloak.example.com/realms/example
 
+.. http:get:: /client_id
+
+   Get the ID of the OIDC client to use when talking to the issuer.
+
+   **Example request**:
+
+   .. sourcecode:: http
+
+      GET /client_id HTTP/1.1
+      Host: example.com
+
+   **Example response**:
+
+   .. sourcecode:: http
+
+      HTTP/1.1 200 OK
+
+      clifton
+
 .. http:get:: /public_key
 
    Get the public part of the currently used signing key.

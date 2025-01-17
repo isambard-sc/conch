@@ -3,6 +3,7 @@
 ---
 config:
   issuer: "http://localhost:8080/realms/conch"
+  client_id: "clifton"
   platforms:
     slurm.ai.example:
       alias: "ai.example"

@@ -47,6 +47,7 @@ struct Args {
 #[derive(Debug, Deserialize)]
 struct Config {
     issuer: url::Url,
+    client_id: openidconnect::ClientId,
     signing_key_path: std::path::PathBuf,
     #[serde(default)]
     platforms: Platforms,
@@ -130,6 +131,7 @@ async fn main() -> Result<()> {
         .route("/health", get(health))
         .route("/sign", get(sign))
         .route("/issuer", get(issuer))
+        .route("/client_id", get(client_id))
         .route("/public_key", get(public_key))
         .with_state(state);
     let listener =
@@ -418,6 +420,11 @@ async fn sign(
 #[tracing::instrument(skip_all)]
 async fn issuer(State(state): State<Arc<AppState>>) -> Result<String, AppError> {
     Ok(state.provider_metadata.issuer().to_string())
+}
+
+#[tracing::instrument(skip_all)]
+async fn client_id(State(state): State<Arc<AppState>>) -> Result<String, AppError> {
+    Ok(state.config.client_id.to_string())
 }
 
 #[derive(Debug)]
