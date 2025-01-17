@@ -5,7 +5,6 @@ use std::{collections::HashMap, sync::Arc};
 
 use anyhow::{anyhow, Context, Result};
 use axum::{
-    async_trait,
     extract::{FromRequestParts, Query, State},
     http::{request::Parts, StatusCode},
     response::{IntoResponse, Response},
@@ -198,7 +197,6 @@ impl Claims {
     }
 }
 
-#[async_trait]
 impl FromRequestParts<Arc<AppState>> for Claims {
     type Rejection = AppError;
 
