@@ -15,6 +15,7 @@ client_id: jsonpath "$.client_id"
 [Asserts]
 jsonpath "$.issuer" == "http://localhost:8080/realms/conch"
 jsonpath "$.client_id" == "conch"
+jsonpath "$.version" == 1
 
 GET {{conch}}/public_key
 HTTP 200

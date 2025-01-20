@@ -37,6 +37,24 @@ The general high-level flow for a client interating with Conch to get a signed c
 
       Conch->>-Client: Signed certificate
 
+Version compatibility
+---------------------
+
+In order to make upgrading reliable and predictable, we define version compatibility explicitly.
+Conch follows `SemVer`_ with the following clarifications:
+
+- Adding a new, required configuration variable is not backwards compatible as it will require a change by the administrator.
+- Adding a new, optional configuration variable is backwards compatible.
+- Changing the meaning of a configuration variable is not backwards compatible.
+- Removing or changing the value of a returned JSON member is not backwards compatible.
+- Adding a new member to a returned JSON object is backwards compatible.
+
+JSON responses will contain a ``version`` member which will be an integer which increments by 1 each time a backwards-incompatible change is made to it.
+
+We commit, as far as we are able, to making upgrading Conch with a ``y`` or ``z`` version number change to be safe
+
+While in pre-1.0, a ``y`` version change will denote a backwards-incompatible change and a ``z`` will denote a backwards-compatible release.
+
 Glossary
 --------
 
@@ -54,3 +72,4 @@ Glossary
       A configurable function which takes claims and creates principals in the SSH certificate.
 
 .. _SSH certificate: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.certkeys?rev=HEAD
+.. _SemVer: https://semver.org/spec/v2.0.0.html

@@ -109,11 +109,13 @@ Conch provides a HTTP API to perform signing requests.
 
       {
         "issuer": "https://keycloak.example.com/realms/example",
-        "client_id": "clifton"
+        "client_id": "clifton",
+        "version": 1
       }
 
    :>json string issuer: the URL of the OIDC issuer.
    :>json string client_id: the ID of the OIDC client to use when talking to the issuer.
+   :>json integer version: the version of the response. Currently ``1``.
 
 .. http:get:: /public_key
 

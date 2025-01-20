@@ -426,6 +426,7 @@ async fn issuer(State(state): State<Arc<AppState>>) -> Result<String, AppError> 
 struct OidcResponse {
     issuer: openidconnect::IssuerUrl,
     client_id: openidconnect::ClientId,
+    version: u32,
 }
 
 #[tracing::instrument(skip_all)]
@@ -433,6 +434,7 @@ async fn oidc(State(state): State<Arc<AppState>>) -> Result<Json<OidcResponse>, 
     Ok(Json(OidcResponse {
         issuer: state.provider_metadata.issuer().clone(),
         client_id: state.config.client_id.clone(),
+        version: 1,
     }))
 }
 
