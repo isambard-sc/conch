@@ -66,6 +66,10 @@ Conch provides a HTTP API to perform signing requests.
 
 .. http:get:: /issuer
 
+   .. deprecated:: 0.3
+
+      Use :http:get:`/oidc` instead.
+
    Get the URL of the OIDC issuer.
 
    **Example request**:
@@ -83,9 +87,11 @@ Conch provides a HTTP API to perform signing requests.
 
       https://keycloak.example.com/realms/example
 
-.. http:get:: /client_id
+.. http:get:: /oidc
 
-   Get the ID of the OIDC client to use when talking to the issuer.
+   .. versionadded:: 0.3
+
+   Get the details of the OIDC issuer and client information to use.
 
    **Example request**:
 
@@ -99,10 +105,19 @@ Conch provides a HTTP API to perform signing requests.
    .. sourcecode:: http
 
       HTTP/1.1 200 OK
+      Content-Type: application/json
 
-      clifton
+      {
+        "issuer": "https://keycloak.example.com/realms/example",
+        "client_id": "clifton"
+      }
+
+   :>json string issuer: the URL of the OIDC issuer.
+   :>json string client_id: the ID of the OIDC client to use when talking to the issuer.
 
 .. http:get:: /public_key
+
+   .. versionadded:: 0.2
 
    Get the public part of the currently used signing key.
 
@@ -122,6 +137,8 @@ Conch provides a HTTP API to perform signing requests.
       ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBsaKBqZPg<example snipped>
 
 .. http:get:: /health
+
+   .. versionadded:: 0.1.3
 
    Check the health of the service.
 

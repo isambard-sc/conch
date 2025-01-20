@@ -7,12 +7,14 @@ HTTP 200
 GET {{conch}}/health
 HTTP 200
 
-GET {{conch}}/issuer
+GET {{conch}}/oidc
 HTTP 200
 [Captures]
-issuer: body
+issuer: jsonpath "$.issuer"
+client_id: jsonpath "$.client_id"
 [Asserts]
-body == "http://localhost:8080/realms/conch"
+jsonpath "$.issuer" == "http://localhost:8080/realms/conch"
+jsonpath "$.client_id" == "conch"
 
 GET {{conch}}/public_key
 HTTP 200
@@ -24,7 +26,7 @@ POST {{issuer}}/protocol/openid-connect/token
 username: test
 password: test
 grant_type: password
-client_id: conch
+client_id: {{ client_id }}
 [Options]
 output: -
 HTTP 200
@@ -36,7 +38,7 @@ POST {{issuer}}/protocol/openid-connect/token
 username: test2
 password: test
 grant_type: password
-client_id: conch
+client_id: {{ client_id }}
 HTTP 200
 [Captures]
 test2_token: jsonpath "$.access_token"

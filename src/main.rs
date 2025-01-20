@@ -131,7 +131,7 @@ async fn main() -> Result<()> {
         .route("/health", get(health))
         .route("/sign", get(sign))
         .route("/issuer", get(issuer))
-        .route("/client_id", get(client_id))
+        .route("/oidc", get(oidc))
         .route("/public_key", get(public_key))
         .with_state(state);
     let listener =
@@ -422,9 +422,18 @@ async fn issuer(State(state): State<Arc<AppState>>) -> Result<String, AppError> 
     Ok(state.provider_metadata.issuer().to_string())
 }
 
+#[derive(Debug, Serialize)]
+struct OidcResponse {
+    issuer: openidconnect::IssuerUrl,
+    client_id: openidconnect::ClientId,
+}
+
 #[tracing::instrument(skip_all)]
-async fn client_id(State(state): State<Arc<AppState>>) -> Result<String, AppError> {
-    Ok(state.config.client_id.to_string())
+async fn oidc(State(state): State<Arc<AppState>>) -> Result<Json<OidcResponse>, AppError> {
+    Ok(Json(OidcResponse {
+        issuer: state.provider_metadata.issuer().clone(),
+        client_id: state.config.client_id.clone(),
+    }))
 }
 
 #[derive(Debug)]
