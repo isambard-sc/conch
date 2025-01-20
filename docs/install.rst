@@ -32,6 +32,7 @@ then, you can create a ``values.yaml`` (see :doc:`config` for details) like:
      issuer: "..."
      platforms: [...]
      mappers: [...]
+     extensions: [...]
 
 Note that the Helm chart manages the config value :confval:`signing_key_path` for you by mounting the file as a read-only volume so you do not need to set it.
 

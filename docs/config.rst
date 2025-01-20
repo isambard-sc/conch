@@ -185,6 +185,17 @@ All the examples below show the syntax for both.
               - single: "short_name"
               - list: "names"
 
+.. confval:: extensions
+   :type: Array of Strings
+   :default: []
+
+   A list of the SSH certificate extensions that should be enabled on any generated certificates.
+   For example:
+
+   .. code-block:: toml
+
+      extensions = ["permit-pty", "permit-agent-forwarding"]
+
 .. _OpenID Provider Issuer discovery: https://openid.net/specs/openid-connect-discovery-1_0.html
 .. _SSH config Host: https://man.openbsd.org/ssh_config#Host
 .. _TOML: https://toml.io

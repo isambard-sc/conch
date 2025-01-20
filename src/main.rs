@@ -54,6 +54,7 @@ struct Config {
     #[serde(default)]
     log_format: LogFormat,
     mappers: Vec<Mapper>,
+    extensions: Vec<Extension>,
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -298,6 +299,15 @@ impl Mapper {
     }
 }
 
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Deserialize)]
+struct Extension(String);
+
+impl Into<String> for Extension {
+    fn into(self) -> std::string::String {
+        self.0
+    }
+}
+
 #[tracing::instrument(
     err(Debug),
     skip_all,
@@ -393,15 +403,11 @@ async fn sign(
     cert_builder
         .key_id(claims.email()?)
         .context("Could not set key ID.")?;
-    cert_builder
-        .extension("permit-agent-forwarding", "")
-        .context("Could not set extension.")?;
-    cert_builder
-        .extension("permit-port-forwarding", "")
-        .context("Could not set extension.")?;
-    cert_builder
-        .extension("permit-pty", "")
-        .context("Could not set extension.")?;
+    for extension in &state.config.extensions {
+        cert_builder
+            .extension(extension.clone(), "")
+            .context("Could not set extension.")?;
+    }
     let certificate = cert_builder
         .sign(&signing_key)
         .context("Could not sign key.")?;

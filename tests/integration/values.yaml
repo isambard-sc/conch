@@ -15,6 +15,10 @@ config:
       proxy_jump: "login.example.com"
   mappers:
     - project_infra: "v1"
+  extensions:
+    - "permit-agent-forwarding"
+    - "permit-port-forwarding"
+    - "permit-pty"
 image:
   registry: localhost
   tag: latest
