@@ -302,9 +302,9 @@ impl Mapper {
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Deserialize)]
 struct Extension(String);
 
-impl Into<String> for Extension {
-    fn into(self) -> std::string::String {
-        self.0
+impl From<Extension> for String {
+    fn from(val: Extension) -> Self {
+        val.0
     }
 }
 
