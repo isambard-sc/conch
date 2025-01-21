@@ -136,6 +136,19 @@ curl -X POST http://localhost:8080/admin/realms/conch/clients \
   }
 EOF
 header "Creating test users"
+projects1=$(jq tojson << EOF
+{
+  "proj1": [
+    "slurm.ai.example",
+    "slurm.3.example"
+  ],
+  "proj2": [
+    "slurm.ai.example",
+    "missing.example"
+  ]
+}
+EOF
+)
 curl -X POST http://localhost:8080/admin/realms/conch/users \
   -H "Content-Type: application/json" -H "Authorization: bearer $TOKEN" --fail-with-body -w "\n" \
   --data @- << EOF
@@ -146,10 +159,19 @@ curl -X POST http://localhost:8080/admin/realms/conch/users \
     "emailVerified": true,
     "attributes": {
       "short_name": ["test_person"],
-      "projects": ["{\"proj1\": [\"slurm.ai.example\", \"slurm.3.example\"], \"proj2\": [\"slurm.ai.example\", \"missing.example\"]}"]
+      "projects": [${projects1}]
     }
   }
 EOF
+projects2=$(jq tojson << EOF
+{
+  "proj1": [],
+  "proj2": [
+    "missing.example"
+  ]
+}
+EOF
+)
 curl -X POST http://localhost:8080/admin/realms/conch/users \
   -H "Content-Type: application/json" -H "Authorization: bearer $TOKEN" --fail-with-body -w "\n" \
   --data @- << EOF
@@ -160,7 +182,7 @@ curl -X POST http://localhost:8080/admin/realms/conch/users \
     "emailVerified": true,
     "attributes": {
       "short_name": ["test2_person"],
-      "projects": ["{\"proj1\": [], \"proj2\": [\"missing.example\"]}"]
+      "projects": [${projects2}]
     }
   }
 EOF
