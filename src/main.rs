@@ -181,10 +181,10 @@ impl Claims {
         serde_json::from_value(
             self.0
                 .get(&claim_name.0)
-                .context(format!("{} claim not present", &claim_name.0))?
+                .context("Claim not present")?
                 .clone(),
         )
-        .context("TODO")
+        .context(format!("Could not retrieve claim `{}`.", &claim_name.0))
     }
 
     fn email(&self) -> Result<String> {
