@@ -138,14 +138,32 @@ EOF
 header "Creating test users"
 projects1=$(jq tojson << EOF
 {
-  "proj1": [
-    "slurm.ai.example",
-    "slurm.3.example"
-  ],
-  "proj2": [
-    "slurm.ai.example",
-    "missing.example"
-  ]
+  "proj1": {
+    "name": "Project 1",
+    "resources": [
+      {
+        "name": "slurm.ai.example",
+        "username": "test"
+      },
+      {
+        "name": "slurm.3.example",
+        "username": "test"
+      }
+    ]
+  },
+  "proj2": {
+    "name": "Project 2",
+    "resources": [
+      {
+        "name": "slurm.ai.example",
+        "username": "test"
+      },
+      {
+        "name": "missing.example",
+        "username": "test"
+      }
+    ]
+  }
 }
 EOF
 )
@@ -165,10 +183,19 @@ curl -X POST http://localhost:8080/admin/realms/conch/users \
 EOF
 projects2=$(jq tojson << EOF
 {
-  "proj1": [],
-  "proj2": [
-    "missing.example"
-  ]
+  "proj1": {
+    "name": "Project 1",
+    "resources": []
+  },
+  "proj2": {
+    "name": "Project 2",
+    "resources": [      
+      {
+        "name": "missing.example",
+        "username": "test"
+      }
+    ]
+  }
 }
 EOF
 )

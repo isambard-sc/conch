@@ -169,9 +169,27 @@ async fn shutdown_signal() {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Deserialize, Serialize)]
+struct ProjectId(String);
+
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Deserialize, Serialize)]
 struct ProjectName(String);
 
-type Projects = HashMap<ProjectName, Vec<PlatformName>>;
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Deserialize, Serialize)]
+struct Username(String);
+
+#[derive(Clone, Debug, Deserialize)]
+struct Resource {
+    name: PlatformName,
+    username: Username,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct Project {
+    name: ProjectName,
+    resources: Vec<Resource>,
+}
+
+type Projects = HashMap<ProjectId, Project>;
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Deserialize, Serialize)]
 struct Claims(serde_json::Value);
@@ -249,7 +267,8 @@ struct SignRequest {
 struct SignResponse {
     platforms: Platforms,
     certificate: ssh_key::Certificate,
-    projects: Projects,
+    // For backwards-compatibility, convert the returned projects to the old form.
+    projects: HashMap<ProjectId, Vec<PlatformName>>,
     short_name: String,
     user: String,
     version: u32,
@@ -351,17 +370,21 @@ async fn sign(
         .status(axum::http::StatusCode::BAD_REQUEST)?;
     let projects: Projects = all_projects
         .iter()
-        .map(|(project, platforms)| {
+        .map(|(project_id, project)| {
             (
-                project.clone(),
-                platforms
-                    .iter()
-                    .filter(|platform_name| state.config.platforms.contains_key(platform_name))
-                    .cloned()
-                    .collect::<Vec<PlatformName>>(),
+                project_id.clone(),
+                Project {
+                    name: project.name.clone(),
+                    resources: project
+                        .resources
+                        .iter()
+                        .filter(|resource| state.config.platforms.contains_key(&resource.name))
+                        .cloned()
+                        .collect(),
+                },
             )
         })
-        .filter(|(_, platforms)| !platforms.is_empty())
+        .filter(|(_, platforms)| !platforms.resources.is_empty())
         .collect();
     let platforms = state.config.platforms.clone();
 
@@ -414,7 +437,20 @@ async fn sign(
 
     let response = SignResponse {
         certificate,
-        projects,
+        projects: projects
+            .iter()
+            .map(|(project_id, project)| {
+                (
+                    project_id.clone(),
+                    project
+                        .resources
+                        .iter()
+                        .map(|resource| &resource.name)
+                        .cloned()
+                        .collect::<Vec<PlatformName>>(),
+                )
+            })
+            .collect(),
         short_name: claims.short_name()?,
         platforms,
         user: claims.email()?,

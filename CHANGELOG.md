@@ -9,6 +9,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Add an `/oidc` endpoint to get the OIDC information to use.
 - Add an `extensions` configuration option to chose the SSH extensions to enable.
 
+### Changed
+- Change the format of the `projects` claim required from the OIDC provder.
+
 ## [0.2.0] - 2024-11-05
 ### Changed
 - Make the claim→principal mapping configurable.

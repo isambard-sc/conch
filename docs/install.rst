@@ -97,19 +97,35 @@ There are three JWT claims that Conch requires in order to generate the response
    If using the ``project_infra`` version 1 mapper, this will be combined with the :term:`project` names to create the principals in the certificate.
 
 ``projects``
-   This must be a JSON object containing a string key for each :term:`project` name, with the value being a list of strings of the :term:`platform` names (see :confval:`platforms`) that the project is available on.
+   This must be a JSON object containing a string key for each :term:`project` name,
+   with the value being a list of objects containing a ``name`` member giving the project name and a ``resources`` member giving the :term:`platform`\ s  (see :confval:`platforms`) that the project is available on.
    For example, this could look like:
 
    .. code-block:: json
 
       {
-         "project-a": [
-            "batch.cluster1.example",
-            "batch.cluster2.example"
-         ],
-         "project-b": [
-            "batch.cluster2.example"
-         ]
+         "project-a": {
+            "name": "Project A",
+            "resources": [
+               {
+                  "name": "batch.cluster1.example",
+                  "username": "user.proj-a"
+               },
+               {
+                  "name": "batch.cluster2.example",
+                  "username": "user.proj-a"
+               }
+            ]
+         },
+         "project-b": {
+            "name": "Project B",
+            "resources": [
+               {   
+                  "name": "batch.cluster2.example",
+                  "username": "user.proj-b"
+               }
+            ]
+         }
       }
 
 .. _releases: https://github.com/isambard-sc/conch/releases
