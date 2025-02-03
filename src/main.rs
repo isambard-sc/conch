@@ -55,6 +55,9 @@ struct Config {
     log_format: LogFormat,
     mappers: Vec<Mapper>,
     extensions: Vec<Extension>,
+    #[serde(default)]
+    /// Internal BriCS: Split by '.' and remove last component
+    internal_strip_portal_from_project: bool,
 }
 
 #[derive(Debug, Deserialize, Default)]
@@ -372,7 +375,12 @@ async fn sign(
         .iter()
         .map(|(project_id, project)| {
             (
-                project_id.clone(),
+                ProjectId(if state.config.internal_strip_portal_from_project {
+                    let project_components = project_id.0.split(".").collect::<Vec<&str>>();
+                    project_components[0..project_components.len() - 1].join(".")
+                } else {
+                    project_id.0.clone()
+                }), // TODO Strip the portal suffix, e.g. ".brics"
                 Project {
                     name: project.name.clone(),
                     resources: project
