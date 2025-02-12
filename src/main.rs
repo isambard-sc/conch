@@ -17,9 +17,7 @@ use axum_extra::{
 };
 use clap::Parser;
 use jsonwebtoken as jwt;
-use openidconnect::{
-    core::CoreProviderMetadata, reqwest::async_http_client, IssuerUrl, JsonWebKey as _,
-};
+use openidconnect::{core::CoreProviderMetadata, reqwest::Client, IssuerUrl, JsonWebKey as _};
 use rand_core::RngCore;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::json;
@@ -122,7 +120,7 @@ async fn main() -> Result<()> {
 
     info!("Trying to access the OIDC endpoints.");
     let provider_metadata =
-        CoreProviderMetadata::discover_async(issuer_url.clone(), async_http_client)
+        CoreProviderMetadata::discover_async(issuer_url.clone(), &Client::new())
             .await
             .context("Could not get OIDC metadata.")?;
 
@@ -279,6 +277,7 @@ struct SignResponse {
 }
 
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "lowercase")]
 enum ProjectInfraVersion {
     V1,
 }
