@@ -180,13 +180,13 @@ struct ProjectName(String);
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Deserialize, Serialize)]
 struct Username(String);
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 struct Resource {
     name: PlatformName,
     username: Username,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 struct Project {
     name: ProjectName,
     resources: Vec<Resource>,
@@ -270,9 +270,7 @@ struct SignRequest {
 struct SignResponse {
     platforms: Platforms,
     certificate: ssh_key::Certificate,
-    // For backwards-compatibility, convert the returned projects to the old form.
-    projects: HashMap<ProjectId, Vec<PlatformName>>,
-    short_name: String,
+    projects: Projects,
     user: String,
     version: u32,
 }
@@ -454,24 +452,10 @@ async fn sign(
 
     let response = SignResponse {
         certificate,
-        projects: projects
-            .iter()
-            .map(|(project_id, project)| {
-                (
-                    project_id.clone(),
-                    project
-                        .resources
-                        .iter()
-                        .map(|resource| &resource.name)
-                        .cloned()
-                        .collect::<Vec<PlatformName>>(),
-                )
-            })
-            .collect(),
-        short_name: claims.short_name()?,
+        projects,
         platforms,
         user: claims.email()?,
-        version: 2,
+        version: 3,
     };
     Ok(Json(response))
 }

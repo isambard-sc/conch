@@ -143,11 +143,11 @@ projects1=$(jq tojson << EOF
     "resources": [
       {
         "name": "slurm.ai.example",
-        "username": "test"
+        "username": "test1"
       },
       {
         "name": "slurm.3.example",
-        "username": "test"
+        "username": "test1"
       }
     ]
   },
@@ -156,11 +156,11 @@ projects1=$(jq tojson << EOF
     "resources": [
       {
         "name": "slurm.ai.example",
-        "username": "test"
+        "username": "test2"
       },
       {
         "name": "missing.example",
-        "username": "test"
+        "username": "test2"
       }
     ]
   }

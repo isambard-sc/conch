@@ -58,11 +58,11 @@ public_key: {{ ssh_key_ed25519_pub }}
 HTTP 200
 [Asserts]
 jsonpath "$.certificate" exists
-jsonpath "$.projects['proj1']" includes "slurm.ai.example"
-jsonpath "$.projects['proj1']" includes "slurm.3.example"
-jsonpath "$.projects['proj2']" includes "slurm.ai.example"
-jsonpath "$.projects['proj2']" not includes "slurm.3.example"
-jsonpath "$.projects['proj2']" not includes "slurm.missing.example"
+jsonpath "$.projects['proj1'].resources[*].name" includes "slurm.ai.example"
+jsonpath "$.projects['proj1'].resources[*].name" includes "slurm.3.example"
+jsonpath "$.projects['proj2'].resources[*].name" includes "slurm.ai.example"
+jsonpath "$.projects['proj2'].resources[*].name" not includes "slurm.3.example"
+jsonpath "$.projects['proj2'].resources[*].name" not includes "slurm.missing.example"
 jsonpath "$.platforms['slurm.ai.example']['alias']" == "ai.example"
 jsonpath "$.platforms['slurm.3.example']['alias']" == "3.example"
 jsonpath "$.user" == "test@example.com"
