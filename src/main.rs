@@ -20,6 +20,7 @@ use jsonwebtoken as jwt;
 use openidconnect::{
     core::CoreProviderMetadata, reqwest::async_http_client, IssuerUrl, JsonWebKey as _,
 };
+use rand_core::RngCore;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::json;
 use tracing::{debug, error, info};
@@ -436,6 +437,9 @@ async fn sign(
     cert_builder
         .key_id(claims.email()?)
         .context("Could not set key ID.")?;
+    cert_builder
+        .serial(rand_core::OsRng.next_u64())
+        .context("Could not set serial number.")?;
     for extension in &state.config.extensions {
         cert_builder
             .extension(extension.clone(), "")
@@ -444,6 +448,7 @@ async fn sign(
     let certificate = cert_builder
         .sign(&signing_key)
         .context("Could not sign key.")?;
+    info!("Signed a certificate with serial {}", &certificate.serial());
 
     let response = SignResponse {
         certificate,

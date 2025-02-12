@@ -7,6 +7,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 ## Unreleased
 ### Changed
 - Now prints the user agent to the log.
+- Set the certificate serial number to a random number. The number should not be absolutely relied upon to be unique.
 
 ## [0.3.1] - 2025-02-03
 ### Added
