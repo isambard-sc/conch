@@ -60,6 +60,7 @@ struct Config {
 }
 
 #[derive(Debug, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
 enum LogFormat {
     #[default]
     Full,
