@@ -61,11 +61,10 @@ Glossary
 .. glossary::
 
    Project
-      A project is intended to describe a time-limited collection of users with access to a particular set of :term:`platform`.
+      A project is intended to describe a time-limited collection of users with access to a particular set of :term:`resource`.
 
-   Platform
-      A platform is a collection of resources.
-      In the context of Conch, it is anything which can be accessed via SSH.
+   Resource
+      In the context of Conch, a resource is anything which can be accessed via SSH.
       For example it might be a specific batch cluster or a development environment.
 
    Mapper

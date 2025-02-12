@@ -4,7 +4,7 @@
 config:
   issuer: "http://localhost:8080/realms/conch"
   client_id: "conch"
-  platforms:
+  resources:
     slurm.ai.example:
       alias: "ai.example"
       hostname: "ai.access.example.com"
@@ -16,8 +16,8 @@ config:
     slurm.5.example:
       alias: "5.example"
       hostname: "5.access.example.com"
-  mappers:
-    - project_infra: "v1"
+  mapper:
+    project_infra: "v1"
   extensions:
     - "permit-agent-forwarding"
     - "permit-port-forwarding"

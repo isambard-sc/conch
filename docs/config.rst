@@ -34,10 +34,10 @@ All the examples below show the syntax for both.
 
    This must be set to the path on disk where the private SSH key is stored.
 
-.. confval:: platforms
+.. confval:: resources
    :type: Table
 
-   The name of the table should be a string of the name of the :term:`platform`.
+   The name of the table should be a string of the name of the :term:`resource`.
    It must contain the following keys:
 
    .. confval:: alias
@@ -47,11 +47,11 @@ All the examples below show the syntax for both.
 
    .. confval:: hostname
 
-      a string containing the real hostname of the platform to SSH into.
+      a string containing the real hostname of the resource to SSH into.
 
    .. confval:: proxy_jump
 
-      a string containing the hostname to be used by `ProxyJump`.
+      an optional string containing the hostname to be used by `ProxyJump`.
 
    For example, it might look like:
 
@@ -61,12 +61,12 @@ All the examples below show the syntax for both.
 
          .. code-block:: toml
 
-            [platforms."batch.cluster1.example"]
+            [resources."batch.cluster1.example"]
             alias = "cluster1.example"
             hostname = "1.access.example.com"
             proxy_jump = "bastion.example.com"
 
-            [platforms."batch.cluster2.example"]
+            [resources."batch.cluster2.example"]
             alias = "cluster2.example"
             hostname = "2.access.example.com"
             proxy_jump = "bastion.example.com"
@@ -75,7 +75,7 @@ All the examples below show the syntax for both.
 
          .. code-block:: yaml
 
-            platforms:
+            resources:
               batch.cluster1.example:
                 alias: "cluster1.example"
                 hostname: "1.access.example.com"
@@ -85,17 +85,19 @@ All the examples below show the syntax for both.
                 hostname: "2.access.example.com"
                 proxy_jump: "bastion.example.com"
 
-.. confval:: mappers
-   :type: Array of Tables
+.. confval:: mapper
+   :type: Table
 
-   This must be set to a list containing the identity :term:`mapper`\ s to apply.
-   Each of these configure which claims (or combinations thereof) should be put into the certificate principals.
+   This must be set to the identity :term:`mapper` to apply.
+   It configures which claims (or combinations thereof) should be put into the certificate principals and returned as an association.
    The available options are:
 
    .. confval:: single
       :type: String
 
-      A claim containing a single string should be placed verbatim into the principal list.
+      A claim containing a single string which is common to all resources and should be placed verbatim into the principal list.
+
+      It will set the ``associations`` return member of the :http:get:`/sign` endpoint to a mapping of resource to username.
 
       .. tabs::
 
@@ -103,20 +105,41 @@ All the examples below show the syntax for both.
 
             .. code-block:: toml
 
-               [[mappers]]
+               [mapper]
                single = "email"
 
          .. group-tab:: ``values.yaml``
 
             .. code-block:: yaml
 
-               mappers:
-                 - single: "email"
+               mapper:
+                 single: "email"
 
-   .. confval:: list
+   .. confval:: per_resource
       :type: String
 
-      A claim containing a JSON list of strings, each of which will be mapped directly into the principal list.
+      Set a username per resource.
+
+      Set this to the name of the claim that contains a JSON object with keys matching the resource names, and values being a JSON object with a single key, ``username`` with the value being the username on that resource.
+      For example, a claim that looks like:
+
+      .. code-block:: json
+         :caption: user claims
+
+         {
+           //...
+           "usernames": {
+             "batch.cluster1.example": {
+               "username": "foo"
+             },
+             "batch.cluster2.example": {
+               "username": "bar"
+             }
+           }
+           //...
+         }
+
+      would mean that the user has the username ``foo`` on ``batch.cluster1.example`` and ``bar`` on ``batch.cluster2.example`` and would be referenced in the config like:
 
       .. tabs::
 
@@ -124,24 +147,55 @@ All the examples below show the syntax for both.
 
             .. code-block:: toml
 
-               [[mappers]]
-               list = "names"
+               [mapper]
+               per_resource = "usernames"
 
          .. group-tab:: ``values.yaml``
 
             .. code-block:: yaml
 
-               mappers:
-                 - list: "names"
+               mapper:
+                  per_resource: "usernames"
+
+      It will set the ``associations`` return member of the :http:get:`/sign` endpoint to the value of that claim.
 
    .. confval:: project_infra
       :type: String
 
-      This will generate a principal for each of the projects passed in.
+      This allows for a separate username for each resource and project combination.
 
       ``"v1"``
-         Create principals of the form ``<short_name>.<project-name>``.
-         The prefix ``<short_name>`` comes from a string claim ``short_name`` and the ``<project-name>`` comes from each of the project names defined in the ``projects`` claim.
+         Use the ``projects`` claim as the basis for the principals.
+         There should be a claim called ``projects`` which must be a JSON object containing a string key for each :term:`project` ID,
+         with the value being an object with a ``name`` member giving the human-readable project name and a ``resources`` member giving the :term:`resource`\ s  (see :confval:`resources`) that the project is available on along with the corresponding ``username``.
+
+         For example, this could look like:
+
+         .. code-block:: json
+
+            {
+              "project-a": {
+                "name": "Project A",
+                  "resources": {
+                    "batch.cluster1.example": {
+                      "username": "user.proj-a"
+                    },
+                    "batch.cluster2.example": {
+                      "username": "user.proj-a"
+                    }
+                 }
+              },
+              "project-b": {
+                "name": "Project B",
+                  "resources": {
+                    "batch.cluster2.example": {
+                      "username": "user.proj-b"
+                    }
+                 }
+              }
+            }
+
+         It will set the ``associations`` return member of the :http:get:`/sign` endpoint to the value of the ``projects`` claim.
 
       .. tabs::
 
@@ -149,41 +203,15 @@ All the examples below show the syntax for both.
 
             .. code-block:: toml
 
-               [[mappers]]
+               [mapper]
                project_infra = "v1"
 
          .. group-tab:: ``values.yaml``
 
             .. code-block:: yaml
 
-               mappers:
-                 - project_infra: "v1"
-
-   You can set as many mappers as you like, just repeat the table:
-
-   .. tabs::
-
-      .. group-tab:: ``config.toml``
-
-         .. code-block:: toml
-
-            [[mappers]]
-            single = "email"
-
-            [[mappers]]
-            single = "short_name"
-
-            [[mappers]]
-            list = "names"
-
-      .. group-tab:: ``values.yaml``
-
-         .. code-block:: yaml
-
-            mappers:
-              - single: "email"
-              - single: "short_name"
-              - list: "names"
+               mapper:
+                 project_infra: "v1"
 
 .. confval:: extensions
    :type: Array of Strings
