@@ -380,7 +380,7 @@ async fn sign(
                     project_components[0..project_components.len() - 1].join(".")
                 } else {
                     project_id.0.clone()
-                }), // TODO Strip the portal suffix, e.g. ".brics"
+                }),
                 Project {
                     name: project.name.clone(),
                     resources: project
