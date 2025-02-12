@@ -58,15 +58,15 @@ public_key: {{ ssh_key_ed25519_pub }}
 HTTP 200
 [Asserts]
 jsonpath "$.certificate" exists
-jsonpath "$.projects['proj1']" includes "slurm.ai.example"
-jsonpath "$.projects['proj1']" includes "slurm.3.example"
-jsonpath "$.projects['proj2']" includes "slurm.ai.example"
-jsonpath "$.projects['proj2']" not includes "slurm.3.example"
-jsonpath "$.projects['proj2']" not includes "slurm.missing.example"
-jsonpath "$.platforms['slurm.ai.example']['alias']" == "ai.example"
-jsonpath "$.platforms['slurm.3.example']['alias']" == "3.example"
+jsonpath "$.associations.projects['proj1'].resources['slurm.ai.example'].username" == "test1"
+jsonpath "$.associations.projects['proj1'].resources['slurm.3.example'].username" == "test1"
+jsonpath "$.associations.projects['proj2'].resources['slurm.ai.example'].username" == "test2"
+jsonpath "$.associations.projects['proj2'].resources['slurm.3.example']" not exists
+jsonpath "$.associations.projects['proj2'].resources['slurm.missing.example']" not exists
+jsonpath "$.resources['slurm.ai.example'].alias" == "ai.example"
+jsonpath "$.resources['slurm.3.example'].alias" == "3.example"
 jsonpath "$.user" == "test@example.com"
-jsonpath "$.version" == 2
+jsonpath "$.version" == 3
 
 GET {{conch}}/sign
 Authorization: Bearer {{ test1_token }}

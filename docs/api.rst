@@ -28,7 +28,7 @@ Conch provides a HTTP API to perform signing requests.
 
       {
         "certificate": "ssh-ed25519-cert-v01@openssh.com AAAAIHNzaC<example snipped>",
-        "platforms": {
+        "resources": {
           "batch.cluster1.example": {
             "alias": "cluster1.example",
             "hostname": "1.access.example.com",
@@ -40,17 +40,29 @@ Conch provides a HTTP API to perform signing requests.
             "proxy_jump": "bastion.example.com"
           }
         },
-        "projects": {
-          "project-a": [
-            "batch.cluster1.example",
-          ],
-          "project-b": [
-            "batch.cluster2.example"
-          ]
+        "associations": {
+          "project-a": {
+            "name": "Project A",
+            "resources": {
+              "batch.cluster1.example": {
+                "username": "user.proj-a"
+              },
+              "batch.cluster2.example": {
+                "username": "user.proj-a"
+              }
+            }
+          },
+          "project-b": {
+            "name": "Project B",
+            "resources": {
+              "batch.cluster2.example": {
+                "username": "user.proj-b"
+              }
+            }
+          }
         },
-        "short_name": "test_person",
         "user": "test@example.com",
-        "version": 2
+        "version": 3
       }
 
    :query string public_key: the SSH public key to sign
@@ -58,11 +70,10 @@ Conch provides a HTTP API to perform signing requests.
    :<header Authorization: an OIDC access token in JWT form. See :ref:`claims` for more information on the contents.
 
    :>json string certificate: the SSH certificate
-   :>json Platforms platforms: the platforms the certificate can be used on. See :confval:`platforms` for the structure.
-   :>json Project projects: the projects the user is part of. This is extracted from the `projects` :ref:`claim <claims>`.
-   :>json string short_name: the short name of the user
+   :>json Resources resources: the resources the certificate can be used on. See :confval:`resources` for the structure.
+   :>json Associations associations: The associations between the palatforms and the projects. This is controlled by the :confval:`mapper` configuration value.
    :>json string user: the email address of the user
-   :>json integer version: the version of the response. Currently ``2``.
+   :>json integer version: the version of the response. Currently ``3``.
 
 .. http:get:: /issuer
 

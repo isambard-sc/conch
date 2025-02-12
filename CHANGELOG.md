@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
+### Changed
+- Conch now returns version 3 of the certificate sign response.
+- The term "platform" has been replaced by the term "resource".
+- The mapper configuration has changed such that only a single mapper is now allowed.
+- The format required by the v1 `project_infra` mapper has changed.
+- The `short_name` and `projects` claims are now not required in all cases.
+
 ### Fixed
 - Correctly parse missing proxy_jump as None.
 

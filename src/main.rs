@@ -1,7 +1,10 @@
 // SPDX-FileCopyrightText: © 2024 Matt Williams <matt.williams@bristol.ac.uk>
 // SPDX-License-Identifier: MIT
 
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 use anyhow::{anyhow, Context, Result};
 use axum::{
@@ -49,10 +52,10 @@ struct Config {
     client_id: openidconnect::ClientId,
     signing_key_path: std::path::PathBuf,
     #[serde(default)]
-    platforms: Platforms,
+    resources: Resources,
     #[serde(default)]
     log_format: LogFormat,
-    mappers: Vec<Mapper>,
+    mapper: Mapper,
     extensions: Vec<Extension>,
     #[serde(default)]
     /// Internal BriCS: Split by '.' and remove last component
@@ -68,18 +71,18 @@ enum LogFormat {
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Deserialize, Serialize)]
-struct PlatformName(String);
+struct ResourceName(String);
 
-type Platforms = HashMap<PlatformName, Platform>;
-
-#[derive(Clone, Debug, Deserialize, Serialize)]
-struct PlatformAlias(String);
+type Resources = HashMap<ResourceName, Resource>;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
-struct Platform {
+struct ResourceAlias(String);
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+struct Resource {
     /// The short name that will be used in e.g. a SSH host alias
-    alias: PlatformAlias,
-    /// The actual hostname of the platform's SSH server.
+    alias: ResourceAlias,
+    /// The actual hostname of the resource's SSH server.
     #[serde(with = "http_serde::authority")]
     hostname: axum::http::uri::Authority,
     /// The hostname of the SSH jump host.
@@ -176,19 +179,67 @@ struct ProjectId(String);
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Deserialize, Serialize)]
 struct ProjectName(String);
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug, Deserialize, Serialize)]
+/// A UNIX username as underatood by SSH
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Deserialize, Serialize)]
 struct Username(String);
 
-#[derive(Clone, Debug, Deserialize)]
-struct Resource {
-    name: PlatformName,
+/// A prinipal as put in the SSH certificate
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Deserialize, Serialize)]
+struct Principal(String);
+
+impl From<Username> for Principal {
+    fn from(username: Username) -> Self {
+        Self(username.0)
+    }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+struct ResourceAssociation {
     username: Username,
 }
 
-#[derive(Clone, Debug, Deserialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 struct Project {
     name: ProjectName,
-    resources: Vec<Resource>,
+    #[serde(deserialize_with = "deserialize_resource_list")]
+    resources: HashMap<ResourceName, ResourceAssociation>,
+}
+
+/// Allow converting from list of entries to the new format.
+/// At some point this will be deprecated.
+fn deserialize_resource_list<'de, D>(
+    deserializer: D,
+) -> Result<HashMap<ResourceName, ResourceAssociation>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    struct ResourceAssociationClaim {
+        name: ResourceName,
+        username: Username,
+    }
+
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum EitherType {
+        Vec(Vec<ResourceAssociationClaim>),
+        HashMap(HashMap<ResourceName, ResourceAssociation>),
+    }
+
+    Ok(match EitherType::deserialize(deserializer)? {
+        EitherType::Vec(resource_association_claims) => resource_association_claims
+            .iter()
+            .map(|claim| {
+                (
+                    claim.name.clone(),
+                    ResourceAssociation {
+                        username: claim.username.clone(),
+                    },
+                )
+            })
+            .collect(),
+        EitherType::HashMap(hash_map) => hash_map,
+    })
 }
 
 type Projects = HashMap<ProjectId, Project>;
@@ -209,10 +260,6 @@ impl Claims {
 
     fn email(&self) -> Result<String> {
         self.parse(&ClaimName::new("email"))
-    }
-
-    fn short_name(&self) -> Result<String> {
-        self.parse(&ClaimName::new("short_name"))
     }
 
     fn projects(&self) -> Result<Projects> {
@@ -267,13 +314,43 @@ struct SignRequest {
 
 #[derive(Debug, Serialize)]
 struct SignResponse {
-    platforms: Platforms,
+    resources: Resources,
     certificate: ssh_key::Certificate,
-    // For backwards-compatibility, convert the returned projects to the old form.
-    projects: HashMap<ProjectId, Vec<PlatformName>>,
-    short_name: String,
+    associations: Associations,
     user: String,
     version: u32,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+enum Associations {
+    Projects(Projects),
+    Resources(HashMap<ResourceName, ResourceAssociation>),
+}
+
+impl Associations {
+    fn principals(&self) -> Result<HashSet<Principal>> {
+        let principals: HashSet<Principal> = match self {
+            Associations::Projects(projects) => projects
+                .iter()
+                .flat_map(|(_, project)| {
+                    project
+                        .resources
+                        .values()
+                        .map(|resource| resource.username.clone().into())
+                })
+                .collect(),
+            Associations::Resources(resources) => resources
+                .iter()
+                .map(|(_, resource)| resource.username.clone().into())
+                .collect(),
+        };
+        if principals.is_empty() {
+            error!("No valid principals from: associations={:?}", &self);
+            anyhow::bail!("No valid principals found after filtering.");
+        }
+        Ok(principals)
+    }
 }
 
 #[derive(Debug, Deserialize)]
@@ -296,29 +373,63 @@ impl ClaimName {
 enum Mapper {
     ProjectInfra(ProjectInfraVersion),
     Single(ClaimName),
-    List(ClaimName),
+    PerResource(ClaimName),
 }
 
 impl Mapper {
-    fn map(&self, claims: &Claims, projects: &Projects) -> Result<Vec<String>> {
+    fn map(&self, claims: &Claims, resources: &Resources) -> Result<Associations> {
         match self {
             Mapper::ProjectInfra(version) => match version {
                 ProjectInfraVersion::V1 => {
-                    let short_name = claims
-                        .short_name()
-                        .context("Could not fetch the user short name.")?;
-                    if short_name.is_empty() {
-                        return Err(anyhow::anyhow!("User short name is empty."));
-                    }
-                    let principals: Vec<String> = projects
-                        .keys()
-                        .map(|p| format!("{}.{}", short_name, p.0))
+                    let all_projects = claims.projects()?;
+
+                    // Filter the list of resources in each project so that only those
+                    // that are referenced in the relevant resources list are kept.
+                    // Finally remove any projects which now have an empty list of resources.
+                    let projects: Projects = all_projects
+                        .iter()
+                        .map(|(project_id, project)| {
+                            (
+                                project_id.clone(),
+                                Project {
+                                    name: project.name.clone(),
+                                    resources: project
+                                        .resources
+                                        .iter()
+                                        .filter(|(resource_id, _resource)| {
+                                            resources.contains_key(resource_id)
+                                        })
+                                        .map(|(k, v)| (k.clone(), v.clone()))
+                                        .collect(),
+                                },
+                            )
+                        })
+                        .filter(|(_, resources)| !resources.resources.is_empty())
                         .collect();
-                    Ok(principals)
+                    Ok(Associations::Projects(projects))
                 }
             },
-            Mapper::Single(claim_name) => Ok(vec![claims.parse(claim_name)?]),
-            Mapper::List(claim_name) => claims.parse(claim_name),
+            Mapper::Single(claim_name) => Ok(Associations::Resources(
+                resources
+                    .iter()
+                    .map(|(p_id, _p)| -> Result<_> {
+                        Ok((
+                            p_id.clone(),
+                            ResourceAssociation {
+                                username: claims.parse(claim_name)?,
+                            },
+                        ))
+                    })
+                    .collect::<Result<_>>()?,
+            )),
+            Mapper::PerResource(claim_name) => Ok(Associations::Resources(
+                claims
+                    .parse::<HashMap<ResourceName, ResourceAssociation>>(claim_name)?
+                    .iter()
+                    .filter(|(resource_id, _resource)| resources.contains_key(resource_id))
+                    .map(|(k, v)| (k.clone(), v.clone()))
+                    .collect(),
+            )),
         }
     }
 }
@@ -369,53 +480,34 @@ async fn sign(
     let signing_key = ssh_key::PrivateKey::read_openssh_file(&state.config.signing_key_path)
         .context("Could not load signing key.")?;
 
-    // Filter the list of platforms in each project so that only those
-    // that are referenced in the relevant platforms list are kept.
-    // Finally remove any projects which now have an empty list of platforms.
-    let all_projects: Projects = claims
-        .projects()
-        .status(axum::http::StatusCode::BAD_REQUEST)?;
-    let projects: Projects = all_projects
-        .iter()
-        .map(|(project_id, project)| {
-            (
-                ProjectId(if state.config.internal_strip_portal_from_project {
-                    let project_components = project_id.0.split(".").collect::<Vec<&str>>();
-                    project_components[0..project_components.len() - 1].join(".")
-                } else {
-                    project_id.0.clone()
-                }),
-                Project {
-                    name: project.name.clone(),
-                    resources: project
-                        .resources
-                        .iter()
-                        .filter(|resource| state.config.platforms.contains_key(&resource.name))
-                        .cloned()
-                        .collect(),
-                },
+    let resources = state.config.resources.clone();
+
+    let associations = state.config.mapper.map(&claims, &resources)?;
+
+    // The BriCS service adds a `.brics` suffix to the end of all project names at
+    // the moment which looks messy. This option remove the suffix.
+    let associations = if state.config.internal_strip_portal_from_project {
+        if let Associations::Projects(projects) = associations {
+            Associations::Projects(
+                projects
+                    .iter()
+                    .map(|(project_id, project)| {
+                        let project_components = project_id.0.split(".").collect::<Vec<&str>>();
+                        let project_id = ProjectId(
+                            project_components[0..project_components.len() - 1].join("."),
+                        );
+                        (project_id, project.clone())
+                    })
+                    .collect(),
             )
-        })
-        .filter(|(_, platforms)| !platforms.resources.is_empty())
-        .collect();
-    let platforms = state.config.platforms.clone();
+        } else {
+            return Err(anyhow::anyhow!("Config variable `internal_strip_portal_from_project` incompatible with non-`project_infra` mapper types.").into());
+        }
+    } else {
+        associations
+    };
 
-    let principals = state
-        .config
-        .mappers
-        .iter()
-        .map(|m| m.map(&claims, &projects))
-        .collect::<Result<Vec<_>>>()
-        .status(axum::http::StatusCode::BAD_REQUEST)?;
-    let principals: Vec<_> = principals.iter().flatten().collect();
-
-    if principals.is_empty() {
-        error!(
-            "No valid principals from: user_projects={:?}, config_platforms={:?}",
-            &all_projects, &state.config.platforms
-        );
-        return Err(anyhow::anyhow!("No valid principals found after filtering.").into());
-    }
+    let principals = &associations.principals()?;
     let valid_after = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)?
         .as_secs();
@@ -432,7 +524,7 @@ async fn sign(
         .context("Could not set certificte type.")?;
     for principal in principals {
         cert_builder
-            .valid_principal(principal)
+            .valid_principal(&principal.0)
             .context("Could not set valid principal.")?;
     }
     cert_builder
@@ -453,24 +545,10 @@ async fn sign(
 
     let response = SignResponse {
         certificate,
-        projects: projects
-            .iter()
-            .map(|(project_id, project)| {
-                (
-                    project_id.clone(),
-                    project
-                        .resources
-                        .iter()
-                        .map(|resource| &resource.name)
-                        .cloned()
-                        .collect::<Vec<PlatformName>>(),
-                )
-            })
-            .collect(),
-        short_name: claims.short_name()?,
-        platforms,
+        associations,
+        resources,
         user: claims.email()?,
-        version: 2,
+        version: 3,
     };
     Ok(Json(response))
 }
@@ -557,5 +635,203 @@ where
 {
     fn from(err: E) -> Self {
         Self(err.into(), None)
+    }
+}
+
+#[allow(clippy::expect_used)]
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use pretty_assertions::assert_eq;
+
+    #[rstest::fixture]
+    fn simple_claims() -> Claims {
+        let jwt_payload = json!({
+            "email": "user1@example.com",
+        });
+        serde_json::from_value(jwt_payload).expect("Could not parse claims.")
+    }
+
+    #[rstest::fixture]
+    fn claims_with_resource_associations() -> Claims {
+        let jwt_payload = json!({
+            "email": "user1@example.com",
+            "resources": {
+                "cluster1": {
+                    "username": "user1.c1",
+                },
+                "cluster2": {
+                    "username": "user1.c2",
+                },
+                "cluster3": {
+                    "username": "user_one.c3",
+                },
+            },
+        });
+        serde_json::from_value(jwt_payload).expect("Could not parse claims.")
+    }
+
+    #[rstest::fixture]
+    fn claims_with_project_associations() -> Claims {
+        let jwt_payload = json!({
+            "email": "user1@example.com",
+            "projects": {
+                "proj1": {
+                    "name": "Project 1",
+                    "resources": {
+                        "cluster1": {
+                            "username": "user1.p1",
+                        },
+                        "cluster2": {
+                            "username": "user1.p1",
+                        },
+                        "cluster3": {
+                            "username": "user_one.p1",
+                        },
+                    },
+                },
+                "proj2": {
+                    "name": "Project 2",
+                    "resources": [ // USe the old-form resources list
+                        {
+                            "name": "cluster1",
+                            "username": "user1.p2",
+                        },
+                        {
+                            "name": "cluster2",
+                            "username": "user_one.p2",
+                        },
+                        {
+                            "name": "unknown_cluster",
+                            "username": "user1.unknown",
+                        },
+                    ],
+                },
+            },
+        });
+        serde_json::from_value(jwt_payload).expect("Could not parse claims.")
+    }
+
+    #[rstest::fixture]
+    fn resources() -> Resources {
+        [
+            (
+                ResourceName("cluster1".to_string()),
+                Resource {
+                    alias: ResourceAlias("1.site".to_string()),
+                    hostname: axum::http::uri::Authority::from_static("c1.example.com"),
+                    proxy_jump: None,
+                },
+            ),
+            (
+                ResourceName("cluster2".to_string()),
+                Resource {
+                    alias: ResourceAlias("2.site".to_string()),
+                    hostname: axum::http::uri::Authority::from_static("c2.example.com"),
+                    proxy_jump: None,
+                },
+            ),
+            (
+                ResourceName("private_cluster".to_string()),
+                Resource {
+                    alias: ResourceAlias("priv.site".to_string()),
+                    hostname: axum::http::uri::Authority::from_static("priv.example.com"),
+                    proxy_jump: None,
+                },
+            ),
+        ]
+        .into()
+    }
+
+    #[rstest::fixture]
+    fn unmatching_resources() -> Resources {
+        [
+            (
+                ResourceName("othercluster1".to_string()),
+                Resource {
+                    alias: ResourceAlias("1.othersite".to_string()),
+                    hostname: axum::http::uri::Authority::from_static("c1.example.org"),
+                    proxy_jump: None,
+                },
+            ),
+            (
+                ResourceName("othercluster2".to_string()),
+                Resource {
+                    alias: ResourceAlias("2.othersite".to_string()),
+                    hostname: axum::http::uri::Authority::from_static("c2.example.org"),
+                    proxy_jump: None,
+                },
+            ),
+        ]
+        .into()
+    }
+
+    #[rstest::rstest]
+    fn single(resources: Resources, simple_claims: Claims) -> Result<()> {
+        let principals = Mapper::Single(ClaimName("email".to_string()))
+            .map(&simple_claims, &resources)?
+            .principals()?;
+        assert_eq!(
+            &principals,
+            &[Principal("user1@example.com".to_string())].into()
+        );
+
+        Ok(())
+    }
+
+    #[rstest::rstest]
+    fn resource_usernames(
+        resources: Resources,
+        claims_with_resource_associations: Claims,
+    ) -> Result<()> {
+        let principals = Mapper::PerResource(ClaimName("resources".to_string()))
+            .map(&claims_with_resource_associations, &resources)?
+            .principals()?;
+        assert_eq!(
+            &principals,
+            &[
+                Principal("user1.c2".to_string()),
+                Principal("user1.c1".to_string()),
+            ]
+            .into()
+        );
+
+        Ok(())
+    }
+
+    #[rstest::rstest]
+    fn resource_usernames_unmatching(
+        unmatching_resources: Resources,
+        claims_with_resource_associations: Claims,
+    ) -> Result<()> {
+        let principals = Mapper::PerResource(ClaimName("resources".to_string()))
+            .map(&claims_with_resource_associations, &unmatching_resources)?
+            .principals();
+        if let Ok(p) = &principals {
+            anyhow::bail!("Error should be returned. Got {p:?}");
+        };
+
+        Ok(())
+    }
+
+    #[rstest::rstest]
+    fn project_usernames(
+        resources: Resources,
+        claims_with_project_associations: Claims,
+    ) -> Result<()> {
+        let principals = Mapper::ProjectInfra(ProjectInfraVersion::V1)
+            .map(&claims_with_project_associations, &resources)?
+            .principals()?;
+        assert_eq!(
+            &principals,
+            &[
+                Principal("user_one.p2".to_string()),
+                Principal("user1.p2".to_string()),
+                Principal("user1.p1".to_string()),
+            ]
+            .into()
+        );
+
+        Ok(())
     }
 }
