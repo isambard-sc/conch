@@ -12,7 +12,7 @@ use axum::{
     Json, RequestPartsExt as _, Router,
 };
 use axum_extra::{
-    headers::{authorization::Bearer, Authorization},
+    headers::{authorization::Bearer, Authorization, UserAgent},
     TypedHeader,
 };
 use clap::Parser;
@@ -334,7 +334,8 @@ impl From<Extension> for String {
     err(Debug),
     skip_all,
     fields(
-        email = claims.email()?,
+        user_agent = &user_agent.map(|h| h.0.to_string()),
+        email = claims.email().ok(),
         fingerprint = %payload.0.public_key.fingerprint(Default::default())
     )
 )]
@@ -342,6 +343,7 @@ async fn sign(
     State(state): State<Arc<AppState>>,
     claims: Claims,
     payload: Query<SignRequest>,
+    user_agent: Option<TypedHeader<UserAgent>>,
 ) -> Result<Json<SignResponse>, AppError> {
     debug!("Signing an SSH key");
     match payload.public_key.key_data() {
