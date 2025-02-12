@@ -30,7 +30,7 @@ then, you can create a `values.yaml` like:
 ---
 config:
   issuer: "https://keycloak.example.com/realms/example"
-  platforms:
+  resources:
     service-one:
       alias: "s1.example"
       hostname: "s1.example.com"
@@ -56,7 +56,7 @@ signing_key_path = "/signing_key"
 
 issuer = "https://keycloak.example.com/realms/example"
 
-[platforms.service-one]
+[resources.service-one]
 alias = "s1.example"
 hostname = "s1.example.com"
 proxy_jump = "jump.example.com"
