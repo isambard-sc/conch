@@ -30,8 +30,8 @@ then, you can create a ``values.yaml`` (see :doc:`config` for details) like:
    ---
    config:
      issuer: "..."
-     platforms: [...]
-     mappers: [...]
+     resources: [...]
+     mapper: [...]
      extensions: [...]
 
 Note that the Helm chart manages the config value :confval:`signing_key_path` for you by mounting the file as a read-only volume so you do not need to set it.
@@ -85,48 +85,13 @@ Claims required
 When requesting an SSH certificate from Conch, a user must authenticate themselves by passing a JSON Web Token.
 Conch will validate this JWT by checking that is was signed by an :confval:`issuer` that you define.
 
-There are three JWT claims that Conch requires in order to generate the response containing the signed certificate:
+There is one JWT claim that Conch requires in order to generate the response containing the signed certificate:
 
 ``email``
    This must be a string containing some unique identifier for the user.
    Usually this is the email address of the user.
 
-``short_name``
-   This must be a string containing a UNIX username-compatible name.
-
-   If using the ``project_infra`` version 1 mapper, this will be combined with the :term:`project` names to create the principals in the certificate.
-
-``projects``
-   This must be a JSON object containing a string key for each :term:`project` name,
-   with the value being a list of objects containing a ``name`` member giving the project name and a ``resources`` member giving the :term:`platform`\ s  (see :confval:`platforms`) that the project is available on.
-   For example, this could look like:
-
-   .. code-block:: json
-
-      {
-         "project-a": {
-            "name": "Project A",
-            "resources": [
-               {
-                  "name": "batch.cluster1.example",
-                  "username": "user.proj-a"
-               },
-               {
-                  "name": "batch.cluster2.example",
-                  "username": "user.proj-a"
-               }
-            ]
-         },
-         "project-b": {
-            "name": "Project B",
-            "resources": [
-               {   
-                  "name": "batch.cluster2.example",
-                  "username": "user.proj-b"
-               }
-            ]
-         }
-      }
+Other claims may be required, depending on which mapper you configure.
 
 .. _releases: https://github.com/isambard-sc/conch/releases
 .. _Clifton: https://github.com/isambard-sc/clifton/

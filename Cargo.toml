@@ -29,6 +29,10 @@ url = "2.5"
 [build-dependencies]
 built = { version = "0.7", default-features = false, features = ["git2"] }
 
+[dev-dependencies]
+rstest = "0.24"
+pretty_assertions = "1.4"
+
 [profile.release]
 strip = true
 lto = true
