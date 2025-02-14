@@ -202,7 +202,7 @@ impl Claims {
         serde_json::from_value(
             self.0
                 .get(&claim_name.0)
-                .context("Claim not present")?
+                .context(format!("Claim `{}` not present", &claim_name.0))?
                 .clone(),
         )
         .context(format!("Could not retrieve claim `{}`.", &claim_name.0))
@@ -305,7 +305,9 @@ impl Mapper {
         match self {
             Mapper::ProjectInfra(version) => match version {
                 ProjectInfraVersion::V1 => {
-                    let short_name = claims.short_name()?;
+                    let short_name = claims
+                        .short_name()
+                        .context("Could not fetch the user short name.")?;
                     if short_name.is_empty() {
                         return Err(anyhow::anyhow!("User short name is empty."));
                     }
