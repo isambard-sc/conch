@@ -179,7 +179,7 @@ struct ProjectId(String);
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Deserialize, Serialize)]
 struct ProjectName(String);
 
-/// A UNIX username as underatood by SSH
+/// A UNIX username as understood by SSH
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Deserialize, Serialize)]
 struct Username(String);
 
@@ -692,7 +692,7 @@ mod tests {
                 },
                 "proj2": {
                     "name": "Project 2",
-                    "resources": [ // USe the old-form resources list
+                    "resources": [ // Use the old-form resources list
                         {
                             "name": "cluster1",
                             "username": "user1.p2",
