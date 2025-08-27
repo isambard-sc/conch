@@ -71,7 +71,49 @@ Conch provides a HTTP API to perform signing requests.
 
    :>json string certificate: the SSH certificate
    :>json Resources resources: the resources the certificate can be used on. See :confval:`resources` for the structure.
-   :>json Associations associations: The associations between the palatforms and the projects. This is controlled by the :confval:`mapper` configuration value.
+   :>json Associations associations:
+      The associations between the resources and their projects or user details.
+
+      Depending on the value of :confval:`mapper`, the contents of this will vary:
+
+      :confval:`single`/:confval:`per_resource`:
+         .. sourcecode:: json
+
+            "associations": {
+              "resources": {
+                "batch.cluster1.example": {
+                  "username": "foo"
+                },
+                "batch.cluster2.example": {
+                  "username": "bar"
+                }
+              }
+            }
+
+      :confval:`project_infra` ``v1``:
+         .. sourcecode:: json
+
+            "associations": {
+              "project-a": {
+                "name": "Project A",
+                "resources": {
+                  "batch.cluster1.example": {
+                    "username": "user.proj-a"
+                  },
+                  "batch.cluster2.example": {
+                    "username": "user.proj-a"
+                  }
+                }
+              },
+              "project-b": {
+                "name": "Project B",
+                "resources": {
+                 "batch.cluster2.example": {
+                   "username": "user.proj-b"
+                  }
+                }
+              }
+            },
    :>json string user: the email address of the user
    :>json integer version: the version of the response. Currently ``3``.
 
