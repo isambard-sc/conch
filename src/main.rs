@@ -193,28 +193,42 @@ impl From<Username> for Principal {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 struct ResourceAssociation {
+    username: Username,
+    certificate: ssh_key::Certificate,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct ResourceAssociationClaim {
     username: Username,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 struct Project {
     name: ProjectName,
-    #[serde(deserialize_with = "deserialize_resource_list")]
     resources: HashMap<ResourceName, ResourceAssociation>,
+}
+
+type ProjectsClaim = HashMap<ProjectId, ProjectClaim>;
+
+#[derive(Clone, Debug, Deserialize)]
+struct ProjectClaim {
+    name: ProjectName,
+    #[serde(deserialize_with = "deserialize_resource_list")]
+    resources: HashMap<ResourceName, ResourceAssociationClaim>,
 }
 
 /// Allow converting from list of entries to the new format.
 /// At some point this will be deprecated.
 fn deserialize_resource_list<'de, D>(
     deserializer: D,
-) -> Result<HashMap<ResourceName, ResourceAssociation>, D::Error>
+) -> Result<HashMap<ResourceName, ResourceAssociationClaim>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
     #[derive(Deserialize)]
-    struct ResourceAssociationClaim {
+    struct OldResourceAssociationClaim {
         name: ResourceName,
         username: Username,
     }
@@ -222,8 +236,8 @@ where
     #[derive(Deserialize)]
     #[serde(untagged)]
     enum EitherType {
-        Vec(Vec<ResourceAssociationClaim>),
-        HashMap(HashMap<ResourceName, ResourceAssociation>),
+        Vec(Vec<OldResourceAssociationClaim>),
+        HashMap(HashMap<ResourceName, ResourceAssociationClaim>),
     }
 
     Ok(match EitherType::deserialize(deserializer)? {
@@ -232,7 +246,7 @@ where
             .map(|claim| {
                 (
                     claim.name.clone(),
-                    ResourceAssociation {
+                    ResourceAssociationClaim {
                         username: claim.username.clone(),
                     },
                 )
@@ -244,7 +258,7 @@ where
 
 type Projects = HashMap<ProjectId, Project>;
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug, Deserialize, Serialize)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Deserialize)]
 struct Claims(serde_json::Value);
 
 impl Claims {
@@ -262,7 +276,7 @@ impl Claims {
         self.parse(&ClaimName::new("email"))
     }
 
-    fn projects(&self) -> Result<Projects> {
+    fn projects(&self) -> Result<ProjectsClaim> {
         self.parse(&ClaimName::new("projects"))
     }
 }
@@ -315,13 +329,12 @@ struct SignRequest {
 #[derive(Debug, Serialize)]
 struct SignResponse {
     resources: Resources,
-    certificate: ssh_key::Certificate,
     associations: Associations,
     user: String,
     version: u32,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "snake_case")]
 enum Associations {
     Projects(Projects),
@@ -377,7 +390,7 @@ enum Mapper {
 }
 
 impl Mapper {
-    fn map(&self, claims: &Claims, resources: &Resources) -> Result<Associations> {
+    fn map(&self, claims: &Claims, resources: &Resources, signer: &Signer) -> Result<Associations> {
         match self {
             Mapper::ProjectInfra(version) => match version {
                 ProjectInfraVersion::V1 => {
@@ -386,10 +399,10 @@ impl Mapper {
                     // Filter the list of resources in each project so that only those
                     // that are referenced in the relevant resources list are kept.
                     // Finally remove any projects which now have an empty list of resources.
-                    let projects: Projects = all_projects
+                    let projects = all_projects
                         .iter()
-                        .map(|(project_id, project)| {
-                            (
+                        .flat_map(|(project_id, project)| -> Result<_> {
+                            Ok((
                                 project_id.clone(),
                                 Project {
                                     name: project.name.clone(),
@@ -399,10 +412,19 @@ impl Mapper {
                                         .filter(|(resource_id, _resource)| {
                                             resources.contains_key(resource_id)
                                         })
-                                        .map(|(k, v)| (k.clone(), v.clone()))
-                                        .collect(),
+                                        .map(|(k, v)| {
+                                            Ok((
+                                                k.clone(),
+                                                ResourceAssociation {
+                                                    username: v.username.clone(),
+                                                    certificate: signer
+                                                        .sign(&v.username.clone().into())?,
+                                                },
+                                            ))
+                                        })
+                                        .collect::<Result<_>>()?,
                                 },
-                            )
+                            ))
                         })
                         .filter(|(_, resources)| !resources.resources.is_empty())
                         .collect();
@@ -412,11 +434,12 @@ impl Mapper {
             Mapper::Single(claim_name) => Ok(Associations::Resources(
                 resources
                     .iter()
-                    .map(|(p_id, _p)| -> Result<_> {
+                    .map(|(p_id, _p)| {
                         Ok((
                             p_id.clone(),
                             ResourceAssociation {
                                 username: claims.parse(claim_name)?,
+                                certificate: signer.sign(&claims.parse(claim_name)?)?,
                             },
                         ))
                     })
@@ -424,11 +447,19 @@ impl Mapper {
             )),
             Mapper::PerResource(claim_name) => Ok(Associations::Resources(
                 claims
-                    .parse::<HashMap<ResourceName, ResourceAssociation>>(claim_name)?
+                    .parse::<HashMap<ResourceName, ResourceAssociationClaim>>(claim_name)?
                     .iter()
                     .filter(|(resource_id, _resource)| resources.contains_key(resource_id))
-                    .map(|(k, v)| (k.clone(), v.clone()))
-                    .collect(),
+                    .map(|(k, v)| {
+                        Ok((
+                            k.clone(),
+                            ResourceAssociation {
+                                username: v.username.clone(),
+                                certificate: signer.sign(&v.username.clone().into())?,
+                            },
+                        ))
+                    })
+                    .collect::<Result<_>>()?,
             )),
         }
     }
@@ -440,6 +471,70 @@ struct Extension(String);
 impl From<Extension> for String {
     fn from(val: Extension) -> Self {
         val.0
+    }
+}
+
+/// Provide the certificate signing
+/// Currently assumes one signing key for all resources
+struct Signer {
+    signing_key: ssh_key::PrivateKey,
+    public_key: ssh_key::PublicKey,
+    key_id: String,
+    extensions: Vec<Extension>,
+}
+
+impl<'a> Signer {
+    fn new(
+        signing_key: ssh_key::PrivateKey,
+        public_key: ssh_key::PublicKey,
+        key_id: String,
+        extensions: Vec<Extension>,
+    ) -> Self {
+        Self {
+            signing_key,
+            public_key,
+            key_id,
+            extensions,
+        }
+    }
+
+    fn sign(&self, principal: &Principal) -> Result<ssh_key::Certificate> {
+        let principals = [principal];
+        let valid_after = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)?
+            .as_secs();
+        let valid_before = valid_after + (60 * 60 * 12);
+        let mut cert_builder = ssh_key::certificate::Builder::new_with_random_nonce(
+            &mut rand_core::OsRng,
+            &self.public_key,
+            valid_after,
+            valid_before,
+        )
+        .context("Could not create SSH certificate builder.")?;
+        cert_builder
+            .cert_type(ssh_key::certificate::CertType::User)
+            .context("Could not set certificte type.")?;
+        for principal in principals {
+            cert_builder
+                .valid_principal(&principal.0)
+                .context("Could not set valid principal.")?;
+        }
+        cert_builder
+            .key_id(&self.key_id)
+            .context("Could not set key ID.")?;
+        cert_builder
+            .serial(rand_core::OsRng.next_u64())
+            .context("Could not set serial number.")?;
+        for extension in &self.extensions {
+            cert_builder
+                .extension(extension.clone(), "")
+                .context("Could not set extension.")?;
+        }
+        let certificate = cert_builder
+            .sign(&self.signing_key)
+            .context("Could not sign key.")?;
+        info!("Signed a certificate with serial {}", &certificate.serial());
+        Ok(certificate)
     }
 }
 
@@ -482,7 +577,14 @@ async fn sign(
 
     let resources = state.config.resources.clone();
 
-    let associations = state.config.mapper.map(&claims, &resources)?;
+    let signer = Signer::new(
+        signing_key,
+        payload.public_key.clone(),
+        claims.email()?,
+        state.config.extensions.clone(),
+    );
+
+    let associations = state.config.mapper.map(&claims, &resources, &signer)?;
 
     // The BriCS service adds a `.brics` suffix to the end of all project names at
     // the moment which looks messy. This option remove the suffix.
@@ -507,44 +609,7 @@ async fn sign(
         associations
     };
 
-    let principals = &associations.principals()?;
-    let valid_after = std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)?
-        .as_secs();
-    let valid_before = valid_after + (60 * 60 * 12);
-    let mut cert_builder = ssh_key::certificate::Builder::new_with_random_nonce(
-        &mut rand_core::OsRng,
-        &payload.public_key,
-        valid_after,
-        valid_before,
-    )
-    .context("Could not create SSH certificate builder.")?;
-    cert_builder
-        .cert_type(ssh_key::certificate::CertType::User)
-        .context("Could not set certificte type.")?;
-    for principal in principals {
-        cert_builder
-            .valid_principal(&principal.0)
-            .context("Could not set valid principal.")?;
-    }
-    cert_builder
-        .key_id(claims.email()?)
-        .context("Could not set key ID.")?;
-    cert_builder
-        .serial(rand_core::OsRng.next_u64())
-        .context("Could not set serial number.")?;
-    for extension in &state.config.extensions {
-        cert_builder
-            .extension(extension.clone(), "")
-            .context("Could not set extension.")?;
-    }
-    let certificate = cert_builder
-        .sign(&signing_key)
-        .context("Could not sign key.")?;
-    info!("Signed a certificate with serial {}", &certificate.serial());
-
     let response = SignResponse {
-        certificate,
         associations,
         resources,
         user: claims.email()?,
@@ -650,6 +715,22 @@ mod tests {
             "email": "user1@example.com",
         });
         serde_json::from_value(jwt_payload).expect("Could not parse claims.")
+    }
+
+    fn make_signer(email: String) -> Signer {
+        let public_key = ssh_key::PrivateKey::random(
+            &mut ssh_key::rand_core::OsRng,
+            ssh_key::Algorithm::Ed25519,
+        )
+        .expect("")
+        .public_key()
+        .clone();
+        let signing_key = ssh_key::PrivateKey::random(
+            &mut ssh_key::rand_core::OsRng,
+            ssh_key::Algorithm::Ed25519,
+        )
+        .expect("");
+        Signer::new(signing_key, public_key, email, vec![])
     }
 
     #[rstest::fixture]
@@ -768,8 +849,9 @@ mod tests {
 
     #[rstest::rstest]
     fn single(resources: Resources, simple_claims: Claims) -> Result<()> {
+        let signer = make_signer(simple_claims.email()?);
         let principals = Mapper::Single(ClaimName("email".to_string()))
-            .map(&simple_claims, &resources)?
+            .map(&simple_claims, &resources, &signer)?
             .principals()?;
         assert_eq!(
             &principals,
@@ -784,8 +866,9 @@ mod tests {
         resources: Resources,
         claims_with_resource_associations: Claims,
     ) -> Result<()> {
+        let signer = make_signer(claims_with_resource_associations.email()?);
         let principals = Mapper::PerResource(ClaimName("resources".to_string()))
-            .map(&claims_with_resource_associations, &resources)?
+            .map(&claims_with_resource_associations, &resources, &signer)?
             .principals()?;
         assert_eq!(
             &principals,
@@ -804,8 +887,13 @@ mod tests {
         unmatching_resources: Resources,
         claims_with_resource_associations: Claims,
     ) -> Result<()> {
+        let signer = make_signer(claims_with_resource_associations.email()?);
         let principals = Mapper::PerResource(ClaimName("resources".to_string()))
-            .map(&claims_with_resource_associations, &unmatching_resources)?
+            .map(
+                &claims_with_resource_associations,
+                &unmatching_resources,
+                &signer,
+            )?
             .principals();
         if let Ok(p) = &principals {
             anyhow::bail!("Error should be returned. Got {p:?}");
@@ -819,8 +907,9 @@ mod tests {
         resources: Resources,
         claims_with_project_associations: Claims,
     ) -> Result<()> {
+        let signer = make_signer(claims_with_project_associations.email()?);
         let principals = Mapper::ProjectInfra(ProjectInfraVersion::V1)
-            .map(&claims_with_project_associations, &resources)?
+            .map(&claims_with_project_associations, &resources, &signer)?
             .principals()?;
         assert_eq!(
             &principals,
