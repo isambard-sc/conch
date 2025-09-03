@@ -40,8 +40,6 @@ ssh-keygen -q -t rsa -b 2048 -N '' -f tests/integration/temp/id_rsa_2048
 SSH_KEY_RSA_2048_PUB=$(cat tests/integration/temp/id_rsa_2048.pub)
 ssh-keygen -q -t rsa -b 3072 -N '' -f tests/integration/temp/id_rsa_3072
 SSH_KEY_RSA_3072_PUB=$(cat tests/integration/temp/id_rsa_3072.pub)
-ssh-keygen -q -t dsa -N '' -f tests/integration/temp/id_dsa
-SSH_KEY_DSA_PUB=$(cat tests/integration/temp/id_dsa.pub)
 
 header "Running Hurl tests"
 hurl \
@@ -50,7 +48,6 @@ hurl \
     --variable ssh_key_ed25519_pub="${SSH_KEY_ED25519_PUB}" \
     --variable ssh_key_rsa_2048_pub="${SSH_KEY_RSA_2048_PUB}" \
     --variable ssh_key_rsa_3072_pub="${SSH_KEY_RSA_3072_PUB}" \
-    --variable ssh_key_dsa_pub="${SSH_KEY_DSA_PUB}" \
     --test \
     --report-html results \
     --error-format long \
