@@ -9,5 +9,5 @@ metadata:
     {{- include "conch.labels" . | indent 4 }}
 data:
   conch.toml: |
-    signing_key_path = "{{ .Values.signing_key_dir }}/key"
+    signing_key_dir = "{{ .Values.signing_key_dir }}"
     {{ .Values.config | toToml | nindent 4 }}

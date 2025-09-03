@@ -20,7 +20,7 @@ jsonpath "$.version" == 1
 GET {{conch}}/public_key
 HTTP 200
 [Asserts]
-body startsWith "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5"
+jsonpath "$.keys['slurm.3.example']" startsWith "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5"
 
 POST {{issuer}}/protocol/openid-connect/token
 [FormParams]
@@ -57,10 +57,13 @@ Authorization: Bearer {{ test1_token }}
 public_key: {{ ssh_key_ed25519_pub }}
 HTTP 200
 [Asserts]
-jsonpath "$.certificate" exists
+# jsonpath "$.certificate" exists
 jsonpath "$.associations.projects['proj1'].resources['slurm.ai.example'].username" == "test1"
+jsonpath "$.associations.projects['proj1'].resources['slurm.ai.example'].certificate" exists
 jsonpath "$.associations.projects['proj1'].resources['slurm.3.example'].username" == "test1"
+jsonpath "$.associations.projects['proj1'].resources['slurm.3.example'].certificate" exists
 jsonpath "$.associations.projects['proj2'].resources['slurm.ai.example'].username" == "test2"
+jsonpath "$.associations.projects['proj2'].resources['slurm.ai.example'].certificate" exists
 jsonpath "$.associations.projects['proj2'].resources['slurm.3.example']" not exists
 jsonpath "$.associations.projects['proj2'].resources['slurm.missing.example']" not exists
 jsonpath "$.resources['slurm.ai.example'].alias" == "ai.example"
@@ -74,7 +77,7 @@ Authorization: Bearer {{ test1_token }}
 public_key: {{ ssh_key_rsa_3072_pub }}
 HTTP 200
 [Asserts]
-jsonpath "$.certificate" exists
+jsonpath "$.user" exists
 
 GET {{conch}}/sign
 Authorization: Bearer {{ test1_token }}
