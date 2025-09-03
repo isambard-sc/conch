@@ -22,7 +22,8 @@ kind: Secret
 metadata:
   name: conch-signing-key-secret
 data:
-  key: $(base64 --wrap=0 temp/signing_key)
+  slurm.ai.example: $(base64 --wrap=0 temp/signing_key)
+  slurm.3.example: $(base64 --wrap=0 temp/signing_key)
 EOF
 header "Getting built conch version"
 version=$(podman run conch:latest --version | tail -n1 | cut -d' ' -f 2)
