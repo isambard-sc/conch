@@ -45,11 +45,11 @@ jobs:
       - name: Get version for Helm
         id: get_helm_version
         run: |
-          if [[ "${{ github.ref_name }}" == "master" ]]; then
+          # if [ "${{ github.ref_name }}" == "master" ]]; then
             echo version="${{ steps.get_version.outputs.version }}" >> "${GITHUB_OUTPUT}"
-          else
-            echo version="${{ steps.get_version.outputs.version }}.${{ github.ref_name }}" >> "${GITHUB_OUTPUT}"
-          fi
+          # else
+          #   echo version="${{ steps.get_version.outputs.version }}.${{ github.ref_name }}" >> "${GITHUB_OUTPUT}"
+          # fi
       - name: package helm chart
         run: |
           helm package helm/conch --version "${{ steps.get_helm_version.outputs.version }}" --app-version "${{ steps.get_version.outputs.version }}"
