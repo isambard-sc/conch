@@ -13,6 +13,9 @@ config:
       alias: "3.example"
       hostname: "3.access.example.com"
       proxy_jump: "login.example.com"
+    slurm.5.example:
+      alias: "5.example"
+      hostname: "5.access.example.com"
   mappers:
     - project_infra: "v1"
   extensions:

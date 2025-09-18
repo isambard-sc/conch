@@ -83,8 +83,7 @@ struct Platform {
     #[serde(with = "http_serde::authority")]
     hostname: axum::http::uri::Authority,
     /// The hostname of the SSH jump host.
-    #[serde(with = "http_serde::option::authority")]
-    proxy_jump: Option<axum::http::uri::Authority>,
+    proxy_jump: Option<String>,
 }
 
 #[derive(Debug)]

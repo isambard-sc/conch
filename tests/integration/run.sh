@@ -148,6 +148,10 @@ projects1=$(jq tojson << EOF
       {
         "name": "slurm.3.example",
         "username": "test"
+      },
+      {
+        "name": "slurm.5.example",
+        "username": "test"
       }
     ]
   },

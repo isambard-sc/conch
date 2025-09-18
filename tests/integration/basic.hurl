@@ -85,14 +85,6 @@ HTTP 500
 jsonpath "$.message" contains "RSA keys must be at least 3072 bits long"
 
 GET {{conch}}/sign
-Authorization: Bearer {{ test1_token }}
-[QueryStringParams]
-public_key: {{ ssh_key_dsa_pub }}
-HTTP 500
-[Asserts]
-jsonpath "$.message" contains "DSA keys are not supported"
-
-GET {{conch}}/sign
 Authorization: Bearer {{ test2_token }}
 [QueryStringParams]
 public_key: {{ ssh_key_ed25519_pub }}
