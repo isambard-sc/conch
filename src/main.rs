@@ -636,7 +636,7 @@ async fn sign(
                 ssh_key::PrivateKey::read_openssh_file(
                     &state.config.signing_key_dir.join(r_id.0.clone()),
                 )
-                .context("Could not load signing key.")?,
+                .context(format!("Could not load signing key for `{}`.", r_id.0))?,
             ))
         })
         .collect::<Result<_>>()?;
