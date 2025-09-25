@@ -540,6 +540,13 @@ impl<'a> Signer {
         }
     }
 
+    #[tracing::instrument(
+        skip(self),
+        fields(
+            resource_name = &resource_name.0,
+            principal = &principal.0,
+        )
+    )]
     fn sign(
         &self,
         resource_name: &ResourceName,
