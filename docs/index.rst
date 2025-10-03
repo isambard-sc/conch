@@ -71,5 +71,5 @@ Glossary
    Mapper
       A configurable function which takes claims and creates principals in the SSH certificate.
 
-.. _SSH certificate: https://cvsweb.openbsd.org/src/usr.bin/ssh/PROTOCOL.certkeys?rev=HEAD
+.. _SSH certificate: https://datatracker.ietf.org/doc/draft-miller-ssh-cert/
 .. _SemVer: https://semver.org/spec/v2.0.0.html
