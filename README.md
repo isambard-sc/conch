@@ -9,7 +9,7 @@ Conch is an SSH CA for use in AIRR sites.
 
 ## Installation
 
-Conch can be deployed in a few different way, but all require a private SSH signeing key to be created:
+Conch can be deployed in a few different ways, but all require a private SSH signing key to be created:
 
 ```sh
 ssh-keygen -q -t ed25519 -f ssh_signing_key -C '' -N ''
