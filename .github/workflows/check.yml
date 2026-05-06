@@ -22,9 +22,10 @@ jobs:
     name: License REUSE spec
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           ref: ${{ inputs.ref }}
+          persist-credentials: false
       - name: Install reuse
         run: |
           python -m venv ~/venv
@@ -35,9 +36,10 @@ jobs:
     name: Changelog format
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           ref: ${{ inputs.ref }}
+          persist-credentials: false
       - name: Install kacl
         run: |
           python -m venv ~/venv
@@ -48,24 +50,21 @@ jobs:
     name: Tests and lints
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           ref: ${{ inputs.ref }}
           fetch-depth: 0  # This is needed so that git-describe works properly to set the version
+          persist-credentials: false
       - name: install MUSL
         run: sudo apt install musl-tools
       - name: Install toolchain
-        uses: dtolnay/rust-toolchain@v1
-        with:
-          toolchain: stable
-          targets: x86_64-unknown-linux-musl
-          components: clippy, rustfmt
+        run: rustup toolchain install stable --target="x86_64-unknown-linux-musl" --component="clippy,rustfmt"
       - name: Install Hurl
         run: |
-          VERSION=4.3.0
+          VERSION=8.0.0
           curl --location --remote-name https://github.com/Orange-OpenSource/hurl/releases/download/${VERSION}/hurl_${VERSION}_amd64.deb
           sudo dpkg -i hurl_${VERSION}_amd64.deb
-      - uses: Swatinem/rust-cache@v2
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
       - name: Formatting
         run: cargo fmt --check
       - name: Linting

@@ -11,30 +11,36 @@ on:
         type: string
         required: true
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 permissions: {}
 
 jobs:
   build-release:
-    name: "Build release (${{ matrix.target }})"
+    name: "Build release"
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
-      attestations: write
-      id-token: write
+      packages: write  # Needed to add the OCI container to the registry
+      attestations: write  # Needed to persist the attestations
+      id-token: write  # Needed to mint the OIDC token necessary to request a Sigstore signing certificate
+      artifact-metadata: write  # Needed to create the artefact storage record
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
         with:
           ref: ${{ inputs.ref || '' }}
           fetch-depth: 0  # This is needed so that git-describe works properly to set the version
+          persist-credentials: false
       - name: install MUSL
         run: sudo apt install musl-tools
       - name: Install toolchain
-        uses: dtolnay/rust-toolchain@stable
+        run: rustup toolchain install stable --target="x86_64-unknown-linux-musl"
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
         with:
-          targets: x86_64-unknown-linux-musl
-      - uses: Swatinem/rust-cache@v2
-      - name: Build
+          lookup-only: true
+      - name: Build Conch
         run: cargo build --release
       - name: Build OCI image
         run: oci/build.sh --release
@@ -46,42 +52,49 @@ jobs:
         id: get_helm_version
         run: |
           if [[ "${{ github.ref_name }}" == "master" ]]; then
-            echo version="${{ steps.get_version.outputs.version }}" >> "${GITHUB_OUTPUT}"
+            echo version="${STEPS_GET_VERSION_OUTPUTS_VERSION}" >> "${GITHUB_OUTPUT}"
           else
-            echo version="${{ steps.get_version.outputs.version }}.${{ github.ref_name }}" >> "${GITHUB_OUTPUT}"
+            echo version="${STEPS_GET_VERSION_OUTPUTS_VERSION}.${{ github.ref_name }}" >> "${GITHUB_OUTPUT}"
           fi
+        env:
+          STEPS_GET_VERSION_OUTPUTS_VERSION: ${{ steps.get_version.outputs.version }}
       - name: package helm chart
         run: |
-          helm package helm/conch --version "${{ steps.get_helm_version.outputs.version }}" --app-version "${{ steps.get_version.outputs.version }}"
+          helm package helm/conch --version "${STEPS_GET_HELM_VERSION_OUTPUTS_VERSION}" --app-version "${STEPS_GET_VERSION_OUTPUTS_VERSION}"
+        env:
+          STEPS_GET_HELM_VERSION_OUTPUTS_VERSION: ${{ steps.get_helm_version.outputs.version }}
+          STEPS_GET_VERSION_OUTPUTS_VERSION: ${{ steps.get_version.outputs.version }}
       - name: Log in to GHCR
-        uses: redhat-actions/podman-login@v1
+        uses: redhat-actions/podman-login@4934294ad0449894bcd1e9f191899d7292469603 # v1
         with:
           registry: ghcr.io/${{ github.repository_owner }}
           username: ${{ github.actor }}
           password: ${{ github.token }}
       - name: Log in to Helm GHCR
-        run: echo $GITHUB_TOKEN | helm registry login "ghcr.io/${{ github.repository_owner }}" --username "${{ github.actor }}" --password-stdin
+        run: echo "${GITHUB_TOKEN}" | helm registry login "ghcr.io/${{ github.repository_owner }}" --username "${GITHUB_ACTOR}" --password-stdin
         env:
           GITHUB_TOKEN: "${{ github.token }}"
       - name: Publish OCI image
         id: push-to-ghcr
-        uses: redhat-actions/push-to-registry@v2
+        uses: redhat-actions/push-to-registry@5ed88d269cf581ea9ef6dd6806d01562096bee9c # v2
         with:
           image: conch
           tags: ${{ steps.get_version.outputs.version }}
           registry: ghcr.io/${{ github.repository_owner }}
       - name: Attest
-        uses: actions/attest-build-provenance@v1
-        id: attest
+        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
         with:
           subject-name: ghcr.io/${{ github.repository }}
           subject-digest: ${{ steps.push-to-ghcr.outputs.digest }}
           push-to-registry: true
       - name: Push Helm chart
-        run: helm push "./conch-${{ steps.get_helm_version.outputs.version }}.tgz" "oci://ghcr.io/${{ github.repository_owner }}/charts"
+        run: helm push "./conch-${STEPS_GET_HELM_VERSION_OUTPUTS_VERSION}.tgz" "oci://ghcr.io/${{ github.repository_owner }}/charts"
+        env:
+          STEPS_GET_HELM_VERSION_OUTPUTS_VERSION: ${{ steps.get_helm_version.outputs.version }}
       - name: Store build artefacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: conch
           path: |
             target/release/conch
+          archive: false
