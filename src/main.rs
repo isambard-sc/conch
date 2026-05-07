@@ -325,10 +325,6 @@ impl Claims {
     fn email(&self) -> Result<String> {
         self.parse(&ClaimName::new("email"))
     }
-
-    fn projects(&self) -> Result<ProjectsClaim> {
-        self.parse(&ClaimName::new("projects"))
-    }
 }
 
 impl FromRequestParts<Arc<AppState>> for Claims {
@@ -453,7 +449,7 @@ impl Mapper {
         match self {
             Mapper::ProjectInfra(version) => match version {
                 ProjectInfraVersion::V1 => {
-                    let all_projects = claims.projects()?;
+                    let all_projects: ProjectsClaim = claims.parse(&ClaimName::new("projects"))?;
 
                     // Filter the list of resources in each project so that only those
                     // that are referenced in the relevant resources list are kept.
