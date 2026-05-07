@@ -54,6 +54,7 @@ struct ResourceName(String);
 #[derive(Clone, Debug, Deserialize, Serialize)]
 struct ResourceAlias(String);
 
+/// The configuration of Conch
 mod config {
     use std::collections::HashMap;
 
@@ -85,6 +86,7 @@ mod config {
         Json,
     }
 
+    /// SSH certificate extension
     #[derive(Clone, PartialEq, Eq, Hash, Debug, Deserialize)]
     pub(crate) struct Extension(String);
 
@@ -170,6 +172,7 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
+/// Catch termination signals to shutdown Tokio properly
 async fn shutdown_signal() {
     let ctrl_c = async {
         #[allow(clippy::expect_used)]
@@ -195,6 +198,7 @@ async fn shutdown_signal() {
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Deserialize, Serialize)]
 struct ProjectId(String);
 
+/// A human-readable name for the project
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Deserialize, Serialize)]
 struct ProjectName(String);
 
@@ -208,6 +212,7 @@ struct Principal(String);
 
 type Resources = HashMap<ResourceName, Resource>;
 
+/// A remotely-accessible resource over SSH
 #[derive(Clone, Debug, Deserialize, Serialize)]
 struct Resource {
     /// The short name that will be used in e.g. a SSH host alias
@@ -263,6 +268,9 @@ struct ProjectClaim {
 
 /// Allow converting from list of entries to the new format.
 /// At some point this will be deprecated.
+/// The old format had the resources claim be a list of objects with
+/// the resource name as an value inside. The new format is a mapping
+/// of resource name to an object.
 fn deserialize_resource_list<'de, D>(
     deserializer: D,
 ) -> Result<HashMap<ResourceName, ResourceAssociationClaim>, D::Error>
