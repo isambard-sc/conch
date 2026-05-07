@@ -195,13 +195,6 @@ async fn shutdown_signal() {
     }
 }
 
-#[derive(Clone, PartialEq, Eq, Hash, Debug, Deserialize, Serialize)]
-struct ProjectId(String);
-
-/// A human-readable name for the project
-#[derive(Clone, PartialEq, Eq, Hash, Debug, Deserialize, Serialize)]
-struct ProjectName(String);
-
 /// A UNIX username as understood by SSH
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Deserialize, Serialize)]
 struct Username(String);
@@ -251,62 +244,84 @@ struct ResourceAssociationClaim {
     username: Username,
 }
 
-#[derive(Clone, Debug, Serialize)]
-struct Project {
-    name: ProjectName,
-    resources: HashMap<ResourceName, ResourceAssociation>,
-}
+/// Types for the ProjectInfra mapper
+mod project_infra {
+    use std::collections::HashMap;
 
-type ProjectsClaim = HashMap<ProjectId, ProjectClaim>;
+    use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, Deserialize)]
-struct ProjectClaim {
-    name: ProjectName,
-    #[serde(deserialize_with = "deserialize_resource_list")]
-    resources: HashMap<ResourceName, ResourceAssociationClaim>,
-}
+    use crate::{ResourceAssociation, ResourceAssociationClaim, ResourceName, Username};
 
-/// Allow converting from list of entries to the new format.
-/// At some point this will be deprecated.
-/// The old format had the resources claim be a list of objects with
-/// the resource name as an value inside. The new format is a mapping
-/// of resource name to an object.
-fn deserialize_resource_list<'de, D>(
-    deserializer: D,
-) -> Result<HashMap<ResourceName, ResourceAssociationClaim>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    #[derive(Deserialize)]
-    struct OldResourceAssociationClaim {
-        name: ResourceName,
-        username: Username,
+    #[derive(Clone, PartialEq, Eq, Hash, Debug, Deserialize, Serialize)]
+    pub(crate) struct ProjectId(pub(crate) String);
+
+    /// A human-readable name for the project
+    #[derive(Clone, PartialEq, Eq, Hash, Debug, Deserialize, Serialize)]
+    pub(crate) struct ProjectName(String);
+
+    #[derive(Clone, Debug, Serialize)]
+    pub(crate) struct Project {
+        pub(crate) name: ProjectName,
+        pub(crate) resources: HashMap<ResourceName, ResourceAssociation>,
     }
 
-    #[derive(Deserialize)]
-    #[serde(untagged)]
-    enum EitherType {
-        Vec(Vec<OldResourceAssociationClaim>),
-        HashMap(HashMap<ResourceName, ResourceAssociationClaim>),
+    pub(crate) type ProjectsClaim = HashMap<ProjectId, ProjectClaim>;
+
+    #[derive(Clone, Debug, Deserialize)]
+    pub(crate) struct ProjectClaim {
+        pub(crate) name: ProjectName,
+        #[serde(deserialize_with = "deserialize_resource_list")]
+        pub(crate) resources: HashMap<ResourceName, ResourceAssociationClaim>,
     }
 
-    Ok(match EitherType::deserialize(deserializer)? {
-        EitherType::Vec(resource_association_claims) => resource_association_claims
-            .iter()
-            .map(|claim| {
-                (
-                    claim.name.clone(),
-                    ResourceAssociationClaim {
-                        username: claim.username.clone(),
-                    },
-                )
-            })
-            .collect(),
-        EitherType::HashMap(hash_map) => hash_map,
-    })
-}
+    /// Allow converting from list of entries to the new format.
+    /// At some point this will be deprecated.
+    /// The old format had the resources claim be a list of objects with
+    /// the resource name as a value inside. The new format is a mapping
+    /// of resource name to an object.
+    fn deserialize_resource_list<'de, D>(
+        deserializer: D,
+    ) -> Result<HashMap<ResourceName, ResourceAssociationClaim>, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(Deserialize)]
+        struct OldResourceAssociationClaim {
+            name: ResourceName,
+            username: Username,
+        }
 
-type Projects = HashMap<ProjectId, Project>;
+        #[derive(Deserialize)]
+        #[serde(untagged)]
+        enum EitherType {
+            Vec(Vec<OldResourceAssociationClaim>),
+            HashMap(HashMap<ResourceName, ResourceAssociationClaim>),
+        }
+
+        Ok(match EitherType::deserialize(deserializer)? {
+            EitherType::Vec(resource_association_claims) => resource_association_claims
+                .iter()
+                .map(|claim| {
+                    (
+                        claim.name.clone(),
+                        ResourceAssociationClaim {
+                            username: claim.username.clone(),
+                        },
+                    )
+                })
+                .collect(),
+            EitherType::HashMap(hash_map) => hash_map,
+        })
+    }
+
+    pub(crate) type Projects = HashMap<ProjectId, Project>;
+
+    #[derive(Debug, Deserialize)]
+    #[serde(rename_all = "lowercase")]
+    pub(crate) enum Version {
+        V1,
+    }
+}
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Deserialize)]
 struct Claims(serde_json::Value);
@@ -383,7 +398,7 @@ struct SignResponse {
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "snake_case")]
 enum Associations {
-    Projects(Projects),
+    Projects(project_infra::Projects),
     Resources(HashMap<ResourceName, ResourceAssociation>),
 }
 
@@ -416,12 +431,6 @@ impl Associations {
     }
 }
 
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "lowercase")]
-enum ProjectInfraVersion {
-    V1,
-}
-
 #[derive(Clone, PartialEq, Eq, Hash, Debug, Deserialize)]
 struct ClaimName(String);
 
@@ -434,7 +443,7 @@ impl ClaimName {
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "snake_case")]
 enum Mapper {
-    ProjectInfra(ProjectInfraVersion),
+    ProjectInfra(project_infra::Version),
     Single(ClaimName),
     PerResource(ClaimName),
 }
@@ -448,8 +457,9 @@ impl Mapper {
     ) -> Result<Associations> {
         match self {
             Mapper::ProjectInfra(version) => match version {
-                ProjectInfraVersion::V1 => {
-                    let all_projects: ProjectsClaim = claims.parse(&ClaimName::new("projects"))?;
+                project_infra::Version::V1 => {
+                    let all_projects: project_infra::ProjectsClaim =
+                        claims.parse(&ClaimName::new("projects"))?;
 
                     // Filter the list of resources in each project so that only those
                     // that are referenced in the relevant resources list are kept.
@@ -459,7 +469,7 @@ impl Mapper {
                         .flat_map(|(project_id, project)| -> Result<_> {
                             Ok((
                                 project_id.clone(),
-                                Project {
+                                project_infra::Project {
                                     name: project.name.clone(),
                                     resources: project
                                         .resources
@@ -670,7 +680,7 @@ async fn sign(
                     .iter()
                     .map(|(project_id, project)| {
                         let project_components = project_id.0.split(".").collect::<Vec<&str>>();
-                        let project_id = ProjectId(
+                        let project_id = project_infra::ProjectId(
                             project_components[0..project_components.len() - 1].join("."),
                         );
                         (project_id, project.clone())
@@ -1004,7 +1014,7 @@ mod tests {
         claims_with_project_associations: Claims,
     ) -> Result<()> {
         let signer = make_signer(&resources, claims_with_project_associations.email()?);
-        let principals = Mapper::ProjectInfra(ProjectInfraVersion::V1)
+        let principals = Mapper::ProjectInfra(project_infra::Version::V1)
             .map(&claims_with_project_associations, &resources, &signer)?
             .principals()?;
         assert_eq!(
