@@ -8,7 +8,7 @@ Conch can be deployed in a few different way, but all require a private SSH sign
 
 .. code-block:: shell-session
 
-   $ ssh-keygen -q -t ed25519 -f ssh_signing_key -C '' -N ''
+   $ ssh-keygen -q -t ed25519 -f service-one -C '' -N ''
 
 Conch reads the signing key live on each signing request.
 This means that if you replace the private key on disk, any future requests will use it.
@@ -20,8 +20,8 @@ First, create the SSH signing key and put it in a ``Secret``:
 
 .. code-block:: shell-session
 
-   $ kubectl create secret generic conch-signing-key-secret --from-file=key=ssh_signing_key
-   $ rm ssh_signing_key
+   $ kubectl create secret generic conch-signing-key-secret --from-file=service-one=service-one
+   $ rm service-one
 
 then, you can create a ``values.yaml`` (see :doc:`config` for details) like:
 
@@ -34,7 +34,7 @@ then, you can create a ``values.yaml`` (see :doc:`config` for details) like:
      mapper: [...]
      extensions: [...]
 
-Note that the Helm chart manages the config value :confval:`signing_key_path` for you by mounting the file as a read-only volume so you do not need to set it.
+Note that the Helm chart manages the config value :confval:`signing_key_dir` for you by mounting the file as a read-only volume so you do not need to set it.
 
 You can then install the chart with:
 

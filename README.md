@@ -9,10 +9,11 @@ Conch is an SSH CA for use in AIRR sites.
 
 ## Installation
 
-Conch can be deployed in a few different ways, but all require a private SSH signing key to be created:
+Conch can be deployed in a few different ways, but all require a private SSH signing key to be created.
+Assuming you have a resource you want to enable SSH access to called `service-one`:
 
 ```sh
-ssh-keygen -q -t ed25519 -f ssh_signing_key -C '' -N ''
+ssh-keygen -q -t ed25519 -f service-one -C '' -N ''
 ```
 
 ### Helm
@@ -20,8 +21,8 @@ ssh-keygen -q -t ed25519 -f ssh_signing_key -C '' -N ''
 First, create the SSH signing key and put it in a `Secret`:
 
 ```sh
-kubectl create secret generic conch-signing-key-secret --from-file=key=ssh_signing_key
-rm ssh_signing_key
+kubectl create secret generic conch-signing-key-secret --from-file=service-one=service-one
+rm service-one
 ```
 
 then, you can create a `values.yaml` like:
@@ -52,7 +53,7 @@ Conch can be deployed as a container using e.g. Podman.
 Set up the config file:
 
 ```toml
-signing_key_path = "/signing_key"
+signing_key_path = "/service-one"
 
 issuer = "https://keycloak.example.com/realms/example"
 
@@ -67,7 +68,7 @@ and run the container, pointing it to those two files:
 ```sh
 podman run \
   -v conch.toml:/conch.toml \
-  -v ssh_signing_key:/signing_key \
+  -v service-one:/service-one \
   -e RUST_LOG=info \
   ghcr.io/isambard-sc/conch:0.1.4 --config=/conch.toml
 ```
