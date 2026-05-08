@@ -29,10 +29,11 @@ All the examples below show the syntax for both.
    The OIDC client ID that is configured at :confval:`issuer`.
    For example, it could be set to ``"clifton"``.
 
-.. confval:: signing_key_path
+.. confval:: signing_key_dir
    :type: String (path)
 
-   This must be set to the path on disk where the private SSH key is stored.
+   This must be set to the path on disk where the private SSH keys are stored.
+   Each resource must have its own signing key, named identically to the resource ID in :confval:`resources`.
 
 .. confval:: resources
    :type: Table
