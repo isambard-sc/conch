@@ -56,17 +56,18 @@ struct ResourceAlias(String);
 
 /// The configuration of Conch
 mod config {
-    use std::collections::HashMap;
+    use serde::Deserialize;
 
-    use serde::{Deserialize, Serialize};
-
-    use crate::{Mapper, ResourceAlias, ResourceName};
+    use crate::{Extension, Mapper, Resources};
 
     #[derive(Debug, Deserialize)]
     pub(crate) struct Config {
+        /// The URL of the OAuth authorisation server
         pub(crate) issuer: url::Url,
+        /// THe directory that contains the SSH signing keys
         pub(crate) signing_key_dir: std::path::PathBuf,
         pub(crate) client_id: openidconnect::ClientId,
+        /// The resources to provide certificates for
         #[serde(default)]
         pub(crate) resources: Resources,
         #[serde(default)]
@@ -84,29 +85,6 @@ mod config {
         #[default]
         Full,
         Json,
-    }
-
-    /// SSH certificate extension
-    #[derive(Clone, PartialEq, Eq, Hash, Debug, Deserialize)]
-    pub(crate) struct Extension(String);
-
-    impl From<Extension> for String {
-        fn from(val: Extension) -> Self {
-            val.0
-        }
-    }
-
-    pub(crate) type Resources = HashMap<ResourceName, Resource>;
-
-    #[derive(Clone, Debug, Deserialize, Serialize)]
-    pub(crate) struct Resource {
-        /// The short name that will be used in e.g. a SSH host alias
-        pub(crate) alias: ResourceAlias,
-        /// The actual hostname of the resource's SSH server.
-        #[serde(with = "http_serde::authority")]
-        pub(crate) hostname: axum::http::uri::Authority,
-        /// The hostname of the SSH jump host.
-        pub(crate) proxy_jump: Option<String>,
     }
 }
 
@@ -195,6 +173,16 @@ async fn shutdown_signal() {
     }
 }
 
+/// SSH certificate extension
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Deserialize)]
+pub(crate) struct Extension(String);
+
+impl From<Extension> for String {
+    fn from(val: Extension) -> Self {
+        val.0
+    }
+}
+
 /// A UNIX username as understood by SSH
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash, Debug, Deserialize, Serialize)]
 struct Username(String);
@@ -215,16 +203,6 @@ struct Resource {
     hostname: axum::http::uri::Authority,
     /// The hostname of the SSH jump host.
     proxy_jump: Option<String>,
-}
-
-impl From<crate::config::Resource> for Resource {
-    fn from(resource: crate::config::Resource) -> Self {
-        Self {
-            alias: resource.alias,
-            hostname: resource.hostname,
-            proxy_jump: resource.proxy_jump,
-        }
-    }
 }
 
 impl From<Username> for Principal {
@@ -395,6 +373,9 @@ struct SignResponse {
     version: u32,
 }
 
+/// The information in the response which tells the caller what
+/// resources can be accessed, with what identities, and the
+/// relevant certificates.
 #[derive(Clone, Debug, Serialize)]
 #[serde(rename_all = "snake_case")]
 enum Associations {
@@ -449,12 +430,7 @@ enum Mapper {
 }
 
 impl Mapper {
-    fn map(
-        &self,
-        claims: &Claims,
-        resources: &crate::config::Resources,
-        signer: &Signer,
-    ) -> Result<Associations> {
+    fn map(&self, claims: &Claims, resources: &Resources, signer: &Signer) -> Result<Associations> {
         match self {
             Mapper::ProjectInfra(version) => match version {
                 project_infra::Version::V1 => {
@@ -536,7 +512,7 @@ struct Signer {
     signing_keys: HashMap<ResourceName, ssh_key::PrivateKey>,
     public_key: ssh_key::PublicKey,
     key_id: String,
-    extensions: Vec<crate::config::Extension>,
+    extensions: Vec<Extension>,
 }
 
 impl<'a> Signer {
@@ -544,7 +520,7 @@ impl<'a> Signer {
         signing_keys: HashMap<ResourceName, ssh_key::PrivateKey>,
         public_key: ssh_key::PublicKey,
         key_id: String,
-        extensions: Vec<crate::config::Extension>,
+        extensions: Vec<Extension>,
     ) -> Self {
         Self {
             signing_keys,
@@ -698,10 +674,7 @@ async fn sign(
 
     let response = SignResponse {
         associations,
-        resources: resources
-            .into_iter()
-            .map(|(r_id, r)| (r_id, r.into()))
-            .collect(),
+        resources: resources,
         user: claims.email()?,
         version: 3,
     };
@@ -812,7 +785,7 @@ mod tests {
         serde_json::from_value(jwt_payload).expect("Could not parse claims.")
     }
 
-    fn make_signer(resources: &crate::config::Resources, email: String) -> Signer {
+    fn make_signer(resources: &Resources, email: String) -> Signer {
         let public_key = ssh_key::PrivateKey::random(
             &mut ssh_key::rand_core::OsRng,
             ssh_key::Algorithm::Ed25519,
@@ -862,7 +835,7 @@ mod tests {
             "projects": {
                 "proj1": {
                     "name": "Project 1",
-                    "resources": {
+                    "resources": { // Use the new-form resources map
                         "cluster1": {
                             "username": "user1.p1",
                         },
@@ -897,11 +870,11 @@ mod tests {
     }
 
     #[rstest::fixture]
-    fn resources() -> crate::config::Resources {
+    fn resources() -> Resources {
         [
             (
                 ResourceName("cluster1".to_string()),
-                crate::config::Resource {
+                Resource {
                     alias: ResourceAlias("1.site".to_string()),
                     hostname: axum::http::uri::Authority::from_static("c1.example.com"),
                     proxy_jump: None,
@@ -909,7 +882,7 @@ mod tests {
             ),
             (
                 ResourceName("cluster2".to_string()),
-                crate::config::Resource {
+                Resource {
                     alias: ResourceAlias("2.site".to_string()),
                     hostname: axum::http::uri::Authority::from_static("c2.example.com"),
                     proxy_jump: None,
@@ -917,7 +890,7 @@ mod tests {
             ),
             (
                 ResourceName("private_cluster".to_string()),
-                crate::config::Resource {
+                Resource {
                     alias: ResourceAlias("priv.site".to_string()),
                     hostname: axum::http::uri::Authority::from_static("priv.example.com"),
                     proxy_jump: None,
@@ -928,11 +901,11 @@ mod tests {
     }
 
     #[rstest::fixture]
-    fn unmatching_resources() -> crate::config::Resources {
+    fn unmatching_resources() -> Resources {
         [
             (
                 ResourceName("othercluster1".to_string()),
-                crate::config::Resource {
+                Resource {
                     alias: ResourceAlias("1.othersite".to_string()),
                     hostname: axum::http::uri::Authority::from_static("c1.example.org"),
                     proxy_jump: None,
@@ -940,7 +913,7 @@ mod tests {
             ),
             (
                 ResourceName("othercluster2".to_string()),
-                crate::config::Resource {
+                Resource {
                     alias: ResourceAlias("2.othersite".to_string()),
                     hostname: axum::http::uri::Authority::from_static("c2.example.org"),
                     proxy_jump: None,
@@ -951,7 +924,7 @@ mod tests {
     }
 
     #[rstest::rstest]
-    fn single(resources: crate::config::Resources, simple_claims: Claims) -> Result<()> {
+    fn single(resources: Resources, simple_claims: Claims) -> Result<()> {
         let signer = make_signer(&resources, simple_claims.email()?);
         let principals = Mapper::Single(ClaimName("email".to_string()))
             .map(&simple_claims, &resources, &signer)?
@@ -966,7 +939,7 @@ mod tests {
 
     #[rstest::rstest]
     fn resource_usernames(
-        resources: crate::config::Resources,
+        resources: Resources,
         claims_with_resource_associations: Claims,
     ) -> Result<()> {
         let signer = make_signer(&resources, claims_with_resource_associations.email()?);
@@ -987,7 +960,7 @@ mod tests {
 
     #[rstest::rstest]
     fn resource_usernames_unmatching(
-        unmatching_resources: crate::config::Resources,
+        unmatching_resources: Resources,
         claims_with_resource_associations: Claims,
     ) -> Result<()> {
         let signer = make_signer(
@@ -1010,7 +983,7 @@ mod tests {
 
     #[rstest::rstest]
     fn project_usernames(
-        resources: crate::config::Resources,
+        resources: Resources,
         claims_with_project_associations: Claims,
     ) -> Result<()> {
         let signer = make_signer(&resources, claims_with_project_associations.email()?);

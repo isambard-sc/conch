@@ -27,7 +27,6 @@ Conch provides a HTTP API to perform signing requests.
       Content-Type: application/json
 
       {
-        "certificate": "ssh-ed25519-cert-v01@openssh.com AAAAIHNzaC<example snipped>",
         "resources": {
           "batch.cluster1.example": {
             "alias": "cluster1.example",
@@ -45,10 +44,12 @@ Conch provides a HTTP API to perform signing requests.
             "name": "Project A",
             "resources": {
               "batch.cluster1.example": {
-                "username": "user.proj-a"
+                "username": "user.proj-a",
+                "certificate": "ssh-ed25519-cert-v01@openssh.com AAAAIHNzaC<example snipped>"
               },
               "batch.cluster2.example": {
-                "username": "user.proj-a"
+                "username": "user.proj-a",
+                "certificate": "ssh-ed25519-cert-v01@openssh.com AAAAIHNzaC<example snipped>"
               }
             }
           },
@@ -56,7 +57,8 @@ Conch provides a HTTP API to perform signing requests.
             "name": "Project B",
             "resources": {
               "batch.cluster2.example": {
-                "username": "user.proj-b"
+                "username": "user.proj-b",
+                "certificate": "ssh-ed25519-cert-v01@openssh.com AAAAIHNzaC<example snipped>"
               }
             }
           }
@@ -69,7 +71,6 @@ Conch provides a HTTP API to perform signing requests.
 
    :<header Authorization: an OIDC access token in JWT form. See :ref:`claims` for more information on the contents.
 
-   :>json string certificate: the SSH certificate
    :>json Resources resources: the resources the certificate can be used on. See :confval:`resources` for the structure.
    :>json Associations associations:
       The associations between the resources and their projects or user details.
@@ -82,10 +83,12 @@ Conch provides a HTTP API to perform signing requests.
             "associations": {
               "resources": {
                 "batch.cluster1.example": {
-                  "username": "foo"
+                  "username": "foo",
+                  "certificate": "ssh-ed25519-cert-v01@openssh.com AAAAIHNzaC<example snipped>"
                 },
                 "batch.cluster2.example": {
-                  "username": "bar"
+                  "username": "bar",
+                  "certificate": "ssh-ed25519-cert-v01@openssh.com AAAAIHNzaC<example snipped>"
                 }
               }
             }
@@ -98,10 +101,12 @@ Conch provides a HTTP API to perform signing requests.
                 "name": "Project A",
                 "resources": {
                   "batch.cluster1.example": {
-                    "username": "user.proj-a"
+                    "username": "user.proj-a",
+                    "certificate": "ssh-ed25519-cert-v01@openssh.com AAAAIHNzaC<example snipped>"
                   },
                   "batch.cluster2.example": {
-                    "username": "user.proj-a"
+                    "username": "user.proj-a",
+                    "certificate": "ssh-ed25519-cert-v01@openssh.com AAAAIHNzaC<example snipped>"
                   }
                 }
               },
@@ -109,7 +114,8 @@ Conch provides a HTTP API to perform signing requests.
                 "name": "Project B",
                 "resources": {
                  "batch.cluster2.example": {
-                   "username": "user.proj-b"
+                   "username": "user.proj-b",
+                    "certificate": "ssh-ed25519-cert-v01@openssh.com AAAAIHNzaC<example snipped>"
                   }
                 }
               }
