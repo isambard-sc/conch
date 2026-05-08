@@ -14,6 +14,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - The mapper configuration has changed such that only a single mapper is now allowed.
 - The format required by the v1 `project_infra` mapper has changed.
 - The `short_name` and `projects` claims are now not required in all cases, depending on the mapper used.
+- The config key `platforms` has been renamed to `resources`.
+- Now supports a different signing key per platform. To enable this,
+  the config key `signing_key_path` has been replaced with
+  `signing_key_dir` which should contain the keys for each resource.
 
 ## [0.3.5] - 2025-09-17
 
