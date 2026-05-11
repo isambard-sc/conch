@@ -18,15 +18,14 @@ All the examples below show the syntax for both.
 .. confval:: issuer
    :type: String (URL)
 
-   This must be set as a string containing the URL of the OIDC issuer.
-   It should be the path that contains the ``.well-known/openid-configuration`` location.
-   For example, this could be set to ``"https://keycloak.example.com/realms/example"`` (such that ``https://keycloak.example.com/realms/example/.well-known/openid-configuration`` exists).
-   The issuer must support `OpenID Provider Issuer discovery`_.
+   This must be set as a string containing the URL of the OAuth authorisation server.
+   For example, this could be set to ``"https://keycloak.example.com/realms/example"`` (such that ``https://keycloak.example.com/.well-known/oauth-authorization-server/realms/example/`` exists).
+   The issuer must support `OAuth 2.0 Authorization Server Metadata`_.
 
 .. confval:: client_id
    :type: String
 
-   The OIDC client ID that is configured at :confval:`issuer`.
+   The OAuth client ID that is configured at :confval:`issuer`.
    For example, it could be set to ``"clifton"``.
 
 .. confval:: signing_key_dir
@@ -225,6 +224,6 @@ All the examples below show the syntax for both.
 
       extensions = ["permit-pty", "permit-agent-forwarding"]
 
-.. _OpenID Provider Issuer discovery: https://openid.net/specs/openid-connect-discovery-1_0.html
+.. _OAuth 2.0 Authorization Server Metadata: https://www.rfc-editor.org/rfc/rfc8414.html
 .. _SSH config Host: https://man.openbsd.org/ssh_config#Host
 .. _TOML: https://toml.io

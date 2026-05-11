@@ -7,7 +7,7 @@ HTTP 200
 GET {{conch}}/health
 HTTP 200
 
-GET {{conch}}/oidc
+GET {{conch}}/oauth
 HTTP 200
 [Captures]
 issuer: jsonpath "$.issuer"

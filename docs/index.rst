@@ -12,7 +12,7 @@ Conch
    config
    api
 
-Conch is an `SSH certificate`_ issuer which authenticates using OIDC access tokens.
+Conch is an `SSH certificate`_ issuer which authenticates using OAuth access tokens.
 
 It is intended to be used as a part of an interactive workflow where a real human is getting access to a system via SSH.
 
@@ -24,15 +24,15 @@ The general high-level flow for a client interating with Conch to get a signed c
 .. mermaid::
 
    sequenceDiagram
-      participant OIDC as OIDC issuer
+      participant OAuth as OAuth authorisation<br/>server
       actor Client
       participant Conch
 
-      Client->>OIDC: Authenticate
-      OIDC->>Client: Access token (JWT)
+      Client->>OAuth: Authenticate
+      OAuth->>Client: Access token (JWT)
 
       Client->>+Conch: /sign<br/>Passing the JWT
-      Conch->>OIDC: Validate JWT
+      Conch-->>OAuth: Validate JWT
       note over Conch: Extract JWT claims and<br/>map to certificate principals
 
       Conch->>-Client: Signed certificate

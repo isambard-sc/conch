@@ -120,11 +120,11 @@ async fn main() -> Result<()> {
 
     let issuer_url = IssuerUrl::from_url(config.issuer.clone());
 
-    info!("Trying to access the OIDC endpoints.");
+    info!("Trying to access the OAuth endpoints.");
     let provider_metadata =
         CoreProviderMetadata::discover_async(issuer_url.clone(), &Client::new())
             .await
-            .context("Could not get OIDC metadata.")?;
+            .context("Could not get OAuth metadata.")?;
 
     let state = Arc::new(AppState {
         provider_metadata,
@@ -136,7 +136,8 @@ async fn main() -> Result<()> {
         .route("/health", get(health))
         .route("/sign", get(sign))
         .route("/issuer", get(issuer))
-        .route("/oidc", get(oidc))
+        .route("/oidc", get(oauth))
+        .route("/oauth", get(oauth))
         .route("/public_key", get(public_key))
         .with_state(state);
     let listener =
@@ -687,15 +688,15 @@ async fn issuer(State(state): State<Arc<AppState>>) -> Result<String, AppError> 
 }
 
 #[derive(Debug, Serialize)]
-struct OidcResponse {
+struct OauthResponse {
     issuer: openidconnect::IssuerUrl,
     client_id: openidconnect::ClientId,
     version: u32,
 }
 
 #[tracing::instrument(skip_all)]
-async fn oidc(State(state): State<Arc<AppState>>) -> Result<Json<OidcResponse>, AppError> {
-    Ok(Json(OidcResponse {
+async fn oauth(State(state): State<Arc<AppState>>) -> Result<Json<OauthResponse>, AppError> {
+    Ok(Json(OauthResponse {
         issuer: state.provider_metadata.issuer().clone(),
         client_id: state.config.client_id.clone(),
         version: 1,

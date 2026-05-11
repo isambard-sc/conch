@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - Now supports a different signing key per platform. To enable this,
   the config key `signing_key_path` has been replaced with
   `signing_key_dir` which should contain the keys for each resource.
+- The `/oidc` endpoint has been renamed to `/oauth`.
 
 ## [0.3.5] - 2025-09-17
 

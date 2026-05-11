@@ -108,7 +108,7 @@ curl -X POST http://localhost:8080/admin/realms/conch/client-scopes/extra/protoc
     }
   }
 EOF
-header "Creating conch OIDC client"
+header "Creating conch OAuth client"
 curl -X POST http://localhost:8080/admin/realms/conch/clients \
   -H "Content-Type: application/json" -H "Authorization: bearer $TOKEN" --fail-with-body -w "\n"\
   --data @- << EOF

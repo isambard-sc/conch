@@ -69,7 +69,7 @@ Conch provides a HTTP API to perform signing requests.
 
    :query string public_key: the SSH public key to sign
 
-   :<header Authorization: an OIDC access token in JWT form. See :ref:`claims` for more information on the contents.
+   :<header Authorization: an OAuth access token in JWT form. See :ref:`claims` for more information on the contents.
 
    :>json Resources resources: the resources the certificate can be used on. See :confval:`resources` for the structure.
    :>json Associations associations:
@@ -124,12 +124,13 @@ Conch provides a HTTP API to perform signing requests.
    :>json integer version: the version of the response. Currently ``3``.
 
 .. http:get:: /issuer
+   :deprecated:
 
    .. deprecated:: 0.3
 
-      Use :http:get:`/oidc` instead.
+      Use :http:get:`/oauth` instead.
 
-   Get the URL of the OIDC issuer.
+   Get the URL of the OAuth issuer.
 
    **Example request**:
 
@@ -147,10 +148,17 @@ Conch provides a HTTP API to perform signing requests.
       https://keycloak.example.com/realms/example
 
 .. http:get:: /oidc
+   :deprecated:
+
+   .. deprecated:: 0.4
+
+      Use :http:get:`/oauth` instead.
+
+.. http:get:: /oauth
 
    .. versionadded:: 0.3
 
-   Get the details of the OIDC issuer and client information to use.
+   Get the details of the OAuth authorisation server and client information to use.
 
    **Example request**:
 
@@ -172,8 +180,8 @@ Conch provides a HTTP API to perform signing requests.
         "version": 1
       }
 
-   :>json string issuer: the URL of the OIDC issuer.
-   :>json string client_id: the ID of the OIDC client to use when talking to the issuer.
+   :>json string issuer: the URL of the OAuth issuer.
+   :>json string client_id: the ID of the OAuth client to use when talking to the issuer.
    :>json integer version: the version of the response. Currently ``1``.
 
 .. http:get:: /public_key
