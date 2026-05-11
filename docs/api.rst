@@ -7,6 +7,7 @@ HTTP API
 Conch provides a HTTP API to perform signing requests.
 
 .. http:get:: /sign
+   :addtoc:
 
    Sign a public SSH key, using the provided JWT to authorise.
 
@@ -65,6 +66,7 @@ Conch provides a HTTP API to perform signing requests.
    :>json integer version: the version of the response. Currently ``2``.
 
 .. http:get:: /issuer
+   :deprecated:
 
    .. deprecated:: 0.3
 
@@ -88,6 +90,7 @@ Conch provides a HTTP API to perform signing requests.
       https://keycloak.example.com/realms/example
 
 .. http:get:: /oidc
+   :addtoc:
 
    .. versionadded:: 0.3
 
@@ -118,6 +121,7 @@ Conch provides a HTTP API to perform signing requests.
    :>json integer version: the version of the response. Currently ``1``.
 
 .. http:get:: /public_key
+   :addtoc:
 
    .. versionadded:: 0.2
 
@@ -139,6 +143,7 @@ Conch provides a HTTP API to perform signing requests.
       ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBsaKBqZPg<example snipped>
 
 .. http:get:: /health
+   :addtoc:
 
    .. versionadded:: 0.1.3
 
