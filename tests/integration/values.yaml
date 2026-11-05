@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 ---
 config:
-  issuer: "http://localhost:8080/realms/conch"
+  issuer: "http://keycloak:8080/realms/conch"
   client_id: "conch"
   platforms:
     slurm.ai.example:

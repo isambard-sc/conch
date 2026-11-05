@@ -55,15 +55,6 @@ jobs:
           ref: ${{ inputs.ref }}
           fetch-depth: 0  # This is needed so that git-describe works properly to set the version
           persist-credentials: false
-      - name: install MUSL
-        run: sudo apt install musl-tools
-      - name: Install toolchain
-        run: rustup toolchain install stable --target="x86_64-unknown-linux-musl" --component="clippy,rustfmt"
-      - name: Install Hurl
-        run: |
-          VERSION=8.0.0
-          curl --location --remote-name https://github.com/Orange-OpenSource/hurl/releases/download/${VERSION}/hurl_${VERSION}_amd64.deb
-          sudo dpkg -i hurl_${VERSION}_amd64.deb
       - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
       - name: Formatting
         run: cargo fmt --check

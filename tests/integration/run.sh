@@ -11,6 +11,9 @@ header() { echo "$(tput bold)${@}$(tput sgr0)" ; }
 
 cd tests/integration
 
+network=${CONCH_INTEGRATION_NETWORK:-conch-integration}
+podman network exists "${network}" || podman network create "${network}" >/dev/null
+
 header "Creating test signing key"
 mkdir -p temp
 rm -f temp/signing_key*
@@ -22,7 +25,7 @@ kind: Secret
 metadata:
   name: conch-signing-key-secret
 data:
-  key: $(base64 --wrap=0 temp/signing_key)
+  key: $(base64 -i temp/signing_key)
 EOF
 header "Getting built conch version"
 version=$(podman run conch:latest --version | tail -n1 | cut -d' ' -f 2)
@@ -33,7 +36,7 @@ header "Templating conch helm chart"
 rm -f conch-chart.yaml
 helm template --values values.yaml "temp/conch-${version}.tgz" > temp/conch-chart.yaml
 header "Starting keycloak pod"
-podman kube play --replace k8s.yml
+podman kube play --replace --network="${network}" k8s.yml
 
 header "Logging in to KeyCloak"
 TOKEN=$(
@@ -237,4 +240,4 @@ EOF
 done
 
 header "Starting conch chart"
-podman kube play --replace --network=host temp/conch-chart.yaml
+podman kube play --replace --network="${network}" temp/conch-chart.yaml

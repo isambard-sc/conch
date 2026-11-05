@@ -13,7 +13,7 @@ HTTP 200
 issuer: jsonpath "$.issuer"
 client_id: jsonpath "$.client_id"
 [Asserts]
-jsonpath "$.issuer" == "http://localhost:8080/realms/conch"
+jsonpath "$.issuer" == "http://keycloak:8080/realms/conch"
 jsonpath "$.client_id" == "conch"
 jsonpath "$.version" == 1
 

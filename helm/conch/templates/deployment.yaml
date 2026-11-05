@@ -30,6 +30,9 @@ spec:
               value: {{ .Values.log_level | quote }}
           ports:
             - containerPort: {{ .Values.port }}
+              {{ if .Values.hostPort }}
+              hostPort: {{ .Values.hostPort }}
+              {{ end }}
           readinessProbe:
             httpGet:
               path: /health
