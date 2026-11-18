@@ -23,16 +23,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Check release branch
-        if: github.ref_name != 'master'
+        if: github.ref_name != 'master' && !startsWith(github.ref_name, 'release/')
         run: |
-          echo "::error::Release must be made on the master branch"
+          echo "::error::Release must be made on the master branch or a release/* branch"
           exit 1
       - name: Check version format
         shell: bash
         if: ${{ !contains(fromJSON('["major", "minor", "patch"]'), inputs.version) }}
         run: |
           if ! [[ "${INPUTS_VERSION}" =~ [[:digit:]]+\.[[:digit:]]+\.[[:digit:]]+ ]]; then
-            echo "::error::Verseion string must be a valid semver string"
+            echo "::error::Version string must be a valid semver string"
             exit 1
           fi
         env:

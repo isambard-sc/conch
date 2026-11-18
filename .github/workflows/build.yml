@@ -51,10 +51,10 @@ jobs:
       - name: Get version for Helm
         id: get_helm_version
         run: |
-          if [[ "${{ github.ref_name }}" == "master" ]]; then
+          if [[ "${GITHUB_REF_NAME}" == "master" || "${GITHUB_REF_NAME}" == release/* ]]; then
             echo version="${STEPS_GET_VERSION_OUTPUTS_VERSION}" >> "${GITHUB_OUTPUT}"
           else
-            echo version="${STEPS_GET_VERSION_OUTPUTS_VERSION}.${{ github.ref_name }}" >> "${GITHUB_OUTPUT}"
+            echo version="${STEPS_GET_VERSION_OUTPUTS_VERSION}.${GITHUB_REF_NAME}" >> "${GITHUB_OUTPUT}"
           fi
         env:
           STEPS_GET_VERSION_OUTPUTS_VERSION: ${{ steps.get_version.outputs.version }}
