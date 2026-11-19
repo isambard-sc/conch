@@ -387,14 +387,18 @@ enum Associations {
 impl Associations {
     fn principals(&self) -> Result<HashSet<Principal>> {
         let principals: HashSet<Principal> = match self {
-            Associations::Projects(projects) => projects.values().flat_map(|project| {
+            Associations::Projects(projects) => projects
+                .values()
+                .flat_map(|project| {
                     project
                         .resources
                         .values()
                         .map(|resource| resource.username.clone().into())
                 })
                 .collect(),
-            Associations::Resources(resources) => resources.values().map(|resource| resource.username.clone().into())
+            Associations::Resources(resources) => resources
+                .values()
+                .map(|resource| resource.username.clone().into())
                 .collect(),
         };
         Ok(principals)
@@ -470,7 +474,9 @@ impl Mapper {
                 }
             },
             Mapper::Single(claim_name) => Ok(Associations::Resources(
-                resources.keys().map(|p_id| {
+                resources
+                    .keys()
+                    .map(|p_id| {
                         Ok((
                             p_id.clone(),
                             ResourceAssociation {
@@ -620,7 +626,9 @@ async fn sign(
 
     let signing_keys = state
         .config
-        .resources.keys().map(|r_id| {
+        .resources
+        .keys()
+        .map(|r_id| {
             Ok((
                 r_id.clone(),
                 ssh_key::PrivateKey::read_openssh_file(
@@ -707,15 +715,15 @@ async fn public_key(
 ) -> Result<Json<PublicKeyResponse>, AppError> {
     let keys = state
         .config
-        .resources.keys().map(|r_id| {
+        .resources
+        .keys()
+        .map(|r_id| {
             Ok((
                 r_id.clone(),
-                ssh_key::PrivateKey::read_openssh_file(
-                    &state.config.signing_key_dir.join(&r_id.0),
-                )
-                .context("Could not load signing key.")?
-                .public_key()
-                .to_owned(),
+                ssh_key::PrivateKey::read_openssh_file(&state.config.signing_key_dir.join(&r_id.0))
+                    .context("Could not load signing key.")?
+                    .public_key()
+                    .to_owned(),
             ))
         })
         .collect::<Result<_>>()?;
