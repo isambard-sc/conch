@@ -27,7 +27,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 url = "2.5"
 
 [build-dependencies]
-built = { version = "0.7", default-features = false, features = ["git2"] }
+built = { version = "0.8", default-features = false, features = ["git2"] }
 
 [dev-dependencies]
 rstest = "0.24"
