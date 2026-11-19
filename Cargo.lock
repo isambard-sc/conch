@@ -368,7 +368,6 @@ dependencies = [
  "jsonwebtoken",
  "openidconnect",
  "pretty_assertions",
- "rand_core",
  "rstest",
  "serde",
  "serde_json",
