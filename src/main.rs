@@ -787,23 +787,16 @@ mod tests {
     }
 
     fn make_signer(resources: &Resources, email: String) -> Signer {
-        let public_key = ssh_key::PrivateKey::random(
-            &mut OsRng,
-            ssh_key::Algorithm::Ed25519,
-        )
-        .expect("")
-        .public_key()
-        .clone();
+        let public_key = ssh_key::PrivateKey::random(&mut OsRng, ssh_key::Algorithm::Ed25519)
+            .expect("")
+            .public_key()
+            .clone();
         let signing_keys = resources
             .keys()
             .map(|r_id| {
                 (
                     r_id.to_owned(),
-                    ssh_key::PrivateKey::random(
-                        &mut OsRng,
-                        ssh_key::Algorithm::Ed25519,
-                    )
-                    .expect(""),
+                    ssh_key::PrivateKey::random(&mut OsRng, ssh_key::Algorithm::Ed25519).expect(""),
                 )
             })
             .collect();
