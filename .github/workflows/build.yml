@@ -76,7 +76,7 @@ jobs:
           GITHUB_TOKEN: "${{ github.token }}"
       - name: Publish OCI image
         id: push-to-ghcr
-        uses: redhat-actions/push-to-registry@5ed88d269cf581ea9ef6dd6806d01562096bee9c # v2
+        uses: redhat-actions/push-to-registry@94ade333c38ecc0e60e94785125d9a52ca423b37 # v2
         with:
           image: conch
           tags: ${{ steps.get_version.outputs.version }}
