@@ -21,9 +21,9 @@ use axum_extra::{
 use clap::Parser;
 use jsonwebtoken as jwt;
 use openidconnect::{core::CoreProviderMetadata, reqwest::Client, IssuerUrl, JsonWebKey as _};
-use rand_core::RngCore;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::json;
+use ssh_key::rand_core::{OsRng, RngCore};
 use tracing::{debug, error, info};
 
 use crate::config::LogFormat;
@@ -310,10 +310,10 @@ impl Claims {
         serde_json::from_value(
             self.0
                 .get(&claim_name.0)
-                .context(format!("Claim `{}` not present", &claim_name.0))?
+                .context(format!("Claim `{}` not present", claim_name.0))?
                 .clone(),
         )
-        .context(format!("Could not retrieve claim `{}`.", &claim_name.0))
+        .context(format!("Could not retrieve claim `{}`.", claim_name.0))
     }
 
     fn email(&self) -> Result<String> {
@@ -388,8 +388,8 @@ impl Associations {
     fn principals(&self) -> Result<HashSet<Principal>> {
         let principals: HashSet<Principal> = match self {
             Associations::Projects(projects) => projects
-                .iter()
-                .flat_map(|(_, project)| {
+                .values()
+                .flat_map(|project| {
                     project
                         .resources
                         .values()
@@ -397,8 +397,8 @@ impl Associations {
                 })
                 .collect(),
             Associations::Resources(resources) => resources
-                .iter()
-                .map(|(_, resource)| resource.username.clone().into())
+                .values()
+                .map(|resource| resource.username.clone().into())
                 .collect(),
         };
         Ok(principals)
@@ -475,8 +475,8 @@ impl Mapper {
             },
             Mapper::Single(claim_name) => Ok(Associations::Resources(
                 resources
-                    .iter()
-                    .map(|(p_id, _p)| {
+                    .keys()
+                    .map(|p_id| {
                         Ok((
                             p_id.clone(),
                             ResourceAssociation {
@@ -549,7 +549,7 @@ impl<'a> Signer {
             .as_secs();
         let valid_before = valid_after + (60 * 60 * 12);
         let mut cert_builder = ssh_key::certificate::Builder::new_with_random_nonce(
-            &mut rand_core::OsRng,
+            &mut OsRng,
             &self.public_key,
             valid_after,
             valid_before,
@@ -557,7 +557,7 @@ impl<'a> Signer {
         .context("Could not create SSH certificate builder.")?;
         cert_builder
             .cert_type(ssh_key::certificate::CertType::User)
-            .context("Could not set certificte type.")?;
+            .context("Could not set certificate type.")?;
         for principal in principals {
             cert_builder
                 .valid_principal(&principal.0)
@@ -567,7 +567,7 @@ impl<'a> Signer {
             .key_id(&self.key_id)
             .context("Could not set key ID.")?;
         cert_builder
-            .serial(rand_core::OsRng.next_u64())
+            .serial(OsRng.next_u64())
             .context("Could not set serial number.")?;
         for extension in &self.extensions {
             cert_builder
@@ -627,8 +627,8 @@ async fn sign(
     let signing_keys = state
         .config
         .resources
-        .iter()
-        .map(|(r_id, _)| {
+        .keys()
+        .map(|r_id| {
             Ok((
                 r_id.clone(),
                 ssh_key::PrivateKey::read_openssh_file(
@@ -675,7 +675,7 @@ async fn sign(
 
     let response = SignResponse {
         associations,
-        resources: resources,
+        resources,
         user: claims.email()?,
         version: 3,
     };
@@ -716,16 +716,14 @@ async fn public_key(
     let keys = state
         .config
         .resources
-        .iter()
-        .map(|(r_id, _)| {
+        .keys()
+        .map(|r_id| {
             Ok((
                 r_id.clone(),
-                ssh_key::PrivateKey::read_openssh_file(
-                    &state.config.signing_key_dir.join(r_id.0.to_owned()),
-                )
-                .context("Could not load signing key.")?
-                .public_key()
-                .to_owned(),
+                ssh_key::PrivateKey::read_openssh_file(&state.config.signing_key_dir.join(&r_id.0))
+                    .context("Could not load signing key.")?
+                    .public_key()
+                    .to_owned(),
             ))
         })
         .collect::<Result<_>>()?;
@@ -787,23 +785,16 @@ mod tests {
     }
 
     fn make_signer(resources: &Resources, email: String) -> Signer {
-        let public_key = ssh_key::PrivateKey::random(
-            &mut ssh_key::rand_core::OsRng,
-            ssh_key::Algorithm::Ed25519,
-        )
-        .expect("")
-        .public_key()
-        .clone();
+        let public_key = ssh_key::PrivateKey::random(&mut OsRng, ssh_key::Algorithm::Ed25519)
+            .expect("")
+            .public_key()
+            .clone();
         let signing_keys = resources
             .keys()
             .map(|r_id| {
                 (
                     r_id.to_owned(),
-                    ssh_key::PrivateKey::random(
-                        &mut ssh_key::rand_core::OsRng,
-                        ssh_key::Algorithm::Ed25519,
-                    )
-                    .expect(""),
+                    ssh_key::PrivateKey::random(&mut OsRng, ssh_key::Algorithm::Ed25519).expect(""),
                 )
             })
             .collect();
