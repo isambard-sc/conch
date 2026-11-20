@@ -21,9 +21,9 @@ use axum_extra::{
 use clap::Parser;
 use jsonwebtoken as jwt;
 use openidconnect::{core::CoreProviderMetadata, reqwest::Client, IssuerUrl, JsonWebKey as _};
-use rand_core::RngCore;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use serde_json::json;
+use ssh_key::rand_core::{OsRng, RngCore};
 use tracing::{debug, error, info};
 
 use crate::config::LogFormat;
@@ -549,7 +549,7 @@ impl<'a> Signer {
             .as_secs();
         let valid_before = valid_after + (60 * 60 * 12);
         let mut cert_builder = ssh_key::certificate::Builder::new_with_random_nonce(
-            &mut rand_core::OsRng,
+            &mut OsRng,
             &self.public_key,
             valid_after,
             valid_before,
@@ -557,7 +557,7 @@ impl<'a> Signer {
         .context("Could not create SSH certificate builder.")?;
         cert_builder
             .cert_type(ssh_key::certificate::CertType::User)
-            .context("Could not set certificte type.")?;
+            .context("Could not set certificate type.")?;
         for principal in principals {
             cert_builder
                 .valid_principal(&principal.0)
@@ -567,7 +567,7 @@ impl<'a> Signer {
             .key_id(&self.key_id)
             .context("Could not set key ID.")?;
         cert_builder
-            .serial(rand_core::OsRng.next_u64())
+            .serial(OsRng.next_u64())
             .context("Could not set serial number.")?;
         for extension in &self.extensions {
             cert_builder
@@ -787,23 +787,16 @@ mod tests {
     }
 
     fn make_signer(resources: &Resources, email: String) -> Signer {
-        let public_key = ssh_key::PrivateKey::random(
-            &mut ssh_key::rand_core::OsRng,
-            ssh_key::Algorithm::Ed25519,
-        )
-        .expect("")
-        .public_key()
-        .clone();
+        let public_key = ssh_key::PrivateKey::random(&mut OsRng, ssh_key::Algorithm::Ed25519)
+            .expect("")
+            .public_key()
+            .clone();
         let signing_keys = resources
             .keys()
             .map(|r_id| {
                 (
                     r_id.to_owned(),
-                    ssh_key::PrivateKey::random(
-                        &mut ssh_key::rand_core::OsRng,
-                        ssh_key::Algorithm::Ed25519,
-                    )
-                    .expect(""),
+                    ssh_key::PrivateKey::random(&mut OsRng, ssh_key::Algorithm::Ed25519).expect(""),
                 )
             })
             .collect();
