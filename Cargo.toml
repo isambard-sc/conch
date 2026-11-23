@@ -29,7 +29,7 @@ url = "2.5"
 built = { version = "0.8", default-features = false, features = ["git2"] }
 
 [dev-dependencies]
-rstest = "0.24"
+rstest = "0.28"
 pretty_assertions = "1.4"
 
 [profile.release]
