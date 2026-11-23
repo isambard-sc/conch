@@ -310,10 +310,10 @@ impl Claims {
         serde_json::from_value(
             self.0
                 .get(&claim_name.0)
-                .context(format!("Claim `{}` not present", &claim_name.0))?
+                .context(format!("Claim `{}` not present", claim_name.0))?
                 .clone(),
         )
-        .context(format!("Could not retrieve claim `{}`.", &claim_name.0))
+        .context(format!("Could not retrieve claim `{}`.", claim_name.0))
     }
 
     fn email(&self) -> Result<String> {
@@ -388,8 +388,8 @@ impl Associations {
     fn principals(&self) -> Result<HashSet<Principal>> {
         let principals: HashSet<Principal> = match self {
             Associations::Projects(projects) => projects
-                .iter()
-                .flat_map(|(_, project)| {
+                .values()
+                .flat_map(|project| {
                     project
                         .resources
                         .values()
@@ -397,8 +397,8 @@ impl Associations {
                 })
                 .collect(),
             Associations::Resources(resources) => resources
-                .iter()
-                .map(|(_, resource)| resource.username.clone().into())
+                .values()
+                .map(|resource| resource.username.clone().into())
                 .collect(),
         };
         Ok(principals)
@@ -475,8 +475,8 @@ impl Mapper {
             },
             Mapper::Single(claim_name) => Ok(Associations::Resources(
                 resources
-                    .iter()
-                    .map(|(p_id, _p)| {
+                    .keys()
+                    .map(|p_id| {
                         Ok((
                             p_id.clone(),
                             ResourceAssociation {
@@ -627,8 +627,8 @@ async fn sign(
     let signing_keys = state
         .config
         .resources
-        .iter()
-        .map(|(r_id, _)| {
+        .keys()
+        .map(|r_id| {
             Ok((
                 r_id.clone(),
                 ssh_key::PrivateKey::read_openssh_file(
@@ -675,7 +675,7 @@ async fn sign(
 
     let response = SignResponse {
         associations,
-        resources: resources,
+        resources,
         user: claims.email()?,
         version: 3,
     };
@@ -716,16 +716,14 @@ async fn public_key(
     let keys = state
         .config
         .resources
-        .iter()
-        .map(|(r_id, _)| {
+        .keys()
+        .map(|r_id| {
             Ok((
                 r_id.clone(),
-                ssh_key::PrivateKey::read_openssh_file(
-                    &state.config.signing_key_dir.join(r_id.0.to_owned()),
-                )
-                .context("Could not load signing key.")?
-                .public_key()
-                .to_owned(),
+                ssh_key::PrivateKey::read_openssh_file(&state.config.signing_key_dir.join(&r_id.0))
+                    .context("Could not load signing key.")?
+                    .public_key()
+                    .to_owned(),
             ))
         })
         .collect::<Result<_>>()?;
