@@ -64,7 +64,7 @@ jobs:
           VERSION=8.0.0
           curl --location --remote-name https://github.com/Orange-OpenSource/hurl/releases/download/${VERSION}/hurl_${VERSION}_amd64.deb
           sudo dpkg -i hurl_${VERSION}_amd64.deb
-      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
+      - uses: Swatinem/rust-cache@eedcf2fb1c22f010a0eb66b92f378c110977f266 # v2
       - name: Formatting
         run: cargo fmt --check
       - name: Linting
